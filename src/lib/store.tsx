@@ -44,6 +44,7 @@ type Action =
     | { type: 'TOGGLE_SETTINGS' }
     | { type: 'SET_THEME'; theme: AppState['theme'] }
     | { type: 'SET_TEXT_SIZE'; size: AppState['textSize'] }
+    | { type: 'SET_MODEL'; config: ModelConfig }
     | { type: 'LOAD_STATE'; state: Partial<AppState> };
 
 // Reducer
@@ -96,6 +97,8 @@ function appReducer(state: AppState, action: Action): AppState {
             return { ...state, theme: action.theme };
         case 'SET_TEXT_SIZE':
             return { ...state, textSize: action.size };
+        case 'SET_MODEL':
+            return { ...state, defaultModelConfig: action.config };
         case 'LOAD_STATE':
             return { ...state, ...action.state };
         default:

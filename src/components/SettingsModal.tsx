@@ -12,11 +12,11 @@ export const SettingsModal = () => {
     if (!state.isSettingsOpen) return null;
 
     const providers = [
+        { id: 'groq', name: 'Groq (Free - get key at console.groq.com)' },
         { id: 'openai', name: 'OpenAI (ChatGPT)' },
         { id: 'anthropic', name: 'Anthropic (Claude)' },
         { id: 'gemini', name: 'Google Gemini' },
         { id: 'deepseek', name: 'DeepSeek' },
-        { id: 'kimi', name: 'Kimi (Moonshot)' },
     ];
 
     const handleSave = () => {

@@ -8,6 +8,7 @@ import { Menu, Square, WifiOff } from 'lucide-react';
 import { Message } from '@/types/llm';
 import { v4 as uuidv4 } from 'uuid';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { ModelSelector } from './ModelSelector';
 
 export const ChatArea = () => {
     const { state, dispatch } = useApp();
@@ -178,12 +179,7 @@ export const ChatArea = () => {
                             <Menu size={20} />
                         </button>
                     )}
-                    <div className="flex flex-col">
-                        <span className="text-xs text-text-muted font-mono uppercase">Model</span>
-                        <h2 className="font-bold text-sm sm:text-base flex items-center gap-2">
-                            {state.defaultModelConfig.modelId}
-                        </h2>
-                    </div>
+                    <ModelSelector />
                 </div>
 
                 <div className="flex items-center gap-3">

@@ -11,14 +11,18 @@ export interface LLMResponse {
 
 // Registry
 import { OpenAIAdapter } from "./openai";
-// import { AnthropicAdapter } from "./anthropic";
-// import { GeminiAdapter } from "./gemini";
+import { GroqAdapter } from "./groq";
+import { DeepSeekAdapter } from "./deepseek";
+import { AnthropicAdapter } from "./anthropic";
+import { GeminiAdapter } from "./gemini";
 
 export const getAdapter = (providerId: string): LLMProviderAdapter => {
     switch (providerId) {
         case 'openai': return OpenAIAdapter;
-        // case 'anthropic': return AnthropicAdapter;
-        // case 'gemini': return GeminiAdapter;
+        case 'groq': return GroqAdapter;
+        case 'deepseek': return DeepSeekAdapter;
+        case 'anthropic': return AnthropicAdapter;
+        case 'gemini': return GeminiAdapter;
         default: throw new Error(`Provider ${providerId} not implemented`);
     }
 }
