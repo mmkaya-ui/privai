@@ -32,7 +32,7 @@ export const MessageBubble = React.memo(({ message }: MessageBubbleProps) => {
                     {message.model && <span className="text-xs bg-bg-highlight px-1 rounded text-text-muted">{message.model}</span>}
                 </div>
 
-                <div className={`prose prose-invert max-w-none text-text-main ${isUser ? 'text-text-muted' : ''}`}>
+                <div className="prose prose-invert max-w-none text-text-main">
                     {/* Render attachments first if any */}
                     {message.attachments && message.attachments.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-2">

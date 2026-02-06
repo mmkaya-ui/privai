@@ -18,9 +18,9 @@
   --color-bg-surface-hover: hsl(var(--hue-bg), var(--saturation-bg), 18%);
   --color-bg-highlight: hsl(var(--hue-bg), var(--saturation-bg), 22%);
 
-  --color-text-main: hsl(0, 0%, 95%);
-  --color-text-muted: hsl(220, 10%, 65%);
-  --color-text-faint: hsl(220, 10%, 45%);
+  --color-text-main: hsl(0, 0%, 98%);
+  --color-text-muted: hsl(220, 10%, 75%);
+  --color-text-faint: hsl(220, 10%, 55%);
 
   --color-border: hsl(220, 10%, 20%);
   --color-border-highlight: hsl(220, 10%, 30%);
@@ -70,10 +70,10 @@
   --color-bg-base: hsl(var(--hue-bg), var(--saturation-bg), var(--lightness-bg));
   --color-bg-surface: #ffffff;
   --color-bg-surface-hover: hsl(220, 10%, 96%);
-  /* Reverse text colors */
-  --color-text-main: hsl(220, 20%, 10%);
-  --color-text-muted: hsl(220, 10%, 40%);
-  --color-text-faint: hsl(220, 10%, 60%);
+  /* Reverse text colors - higher contrast for light mode */
+  --color-text-main: hsl(220, 30%, 10%);
+  --color-text-muted: hsl(220, 15%, 35%);
+  --color-text-faint: hsl(220, 10%, 50%);
   --color-border: hsl(220, 15%, 88%);
 }
 
@@ -346,6 +346,22 @@ p {
   color: #f87171;
 }
 
+.text-green-400 {
+  color: #4ade80;
+}
+
+.text-yellow-400 {
+  color: #facc15;
+}
+
+.text-white {
+  color: #ffffff;
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
 .border-border {
   border-color: var(--color-border);
 }
@@ -429,6 +445,11 @@ p {
   border-style: solid;
 }
 
+.border {
+  border-width: 1px;
+  border-style: solid;
+}
+
 .border-b {
   border-bottom-width: 1px;
   border-style: solid;
@@ -441,6 +462,18 @@ p {
 
 .rounded-lg {
   border-radius: var(--radius-lg);
+}
+
+.rounded-xl {
+  border-radius: 1rem;
+}
+
+.rounded-full {
+  border-radius: var(--radius-full);
+}
+
+.rounded-md {
+  border-radius: var(--radius-md);
 }
 
 .rounded {
