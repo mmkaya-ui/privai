@@ -43,9 +43,62 @@ export const SettingsModal = () => {
                     </button>
                 </div>
 
-                <div className="p-4 overflow-y-auto flex-1 space-y-4">
+                <div className="p-4 overflow-y-auto flex-1 space-y-6">
+                    {/* Appearance */}
+                    <div className="space-y-3">
+                        <h3 className="font-semibold text-text-muted text-sm uppercase tracking-wider">Appearance</h3>
+
+                        {/* Theme */}
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium block">Theme</label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {(['light', 'dark', 'oled', 'system'] as const).map((t) => (
+                                    <button
+                                        key={t}
+                                        onClick={() => dispatch({ type: 'SET_THEME', theme: t })}
+                                        className={`
+                                            px-2 py-2 rounded-lg text-xs font-medium border transition-colors capitalize
+                                            ${state.theme === t
+                                                ? 'bg-primary text-white border-primary'
+                                                : 'bg-bg-surface border-border text-text-muted hover:border-border-highlight hover:text-text-main'}
+                                        `}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Text Size */}
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium block flex justify-between">
+                                <span>Text Size</span>
+                                <span className="text-text-muted text-xs uppercase">{state.textSize}</span>
+                            </label>
+                            <div className="flex bg-bg-surface border border-border rounded-lg p-1">
+                                {(['small', 'medium', 'large', 'xlarge'] as const).map((s) => (
+                                    <button
+                                        key={s}
+                                        onClick={() => dispatch({ type: 'SET_TEXT_SIZE', size: s })}
+                                        className={`
+                                            flex-1 py-1.5 rounded-md text-xs font-medium transition-all
+                                            ${state.textSize === s
+                                                ? 'bg-bg-highlight text-text-main shadow-sm'
+                                                : 'text-text-muted hover:text-text-main'}
+                                        `}
+                                    >
+                                        {s === 'small' ? 'Aa' : s === 'medium' ? 'Aa' : s === 'large' ? 'Aa' : 'Aa'}
+                                        <span className={`block text-[8px] opacity-60 ${s === 'small' ? 'scale-75' : s === 'large' ? 'scale-110' : s === 'xlarge' ? 'scale-125' : ''}`}>
+                                            {s.charAt(0).toUpperCase()}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="space-y-4">
-                        <h3 className="font-semibold text-text-muted text-sm uppercase tracking-wider">API Keys (Stored Locally)</h3>
+                        <h3 className="font-semibold text-text-muted text-sm uppercase tracking-wider">API Keys</h3>
                         {providers.map(p => (
                             <div key={p.id} className="space-y-1">
                                 <label className="text-sm font-medium block">{p.name}</label>

@@ -9,7 +9,8 @@ interface AppState {
     sessions: ChatSession[];
     currentSessionId: string | null;
     apiKeys: Record<string, string>; // provider -> key
-    theme: 'dark' | 'light';
+    theme: 'dark' | 'light' | 'oled' | 'system';
+    textSize: 'small' | 'medium' | 'large' | 'xlarge';
     isSidebarOpen: boolean;
     isSettingsOpen: boolean;
     defaultModelConfig: ModelConfig;
@@ -20,7 +21,8 @@ const initialState: AppState = {
     sessions: [],
     currentSessionId: null,
     apiKeys: {},
-    theme: 'dark',
+    theme: 'dark', // Default, will verify 'system' later
+    textSize: 'medium',
     isSidebarOpen: true,
     isSettingsOpen: false,
     defaultModelConfig: {
@@ -40,7 +42,8 @@ type Action =
     | { type: 'UPDATE_MESSAGE'; sessionId: string; messageId: string; content: string }
     | { type: 'TOGGLE_SIDEBAR' }
     | { type: 'TOGGLE_SETTINGS' }
-    | { type: 'SET_THEME'; theme: 'dark' | 'light' }
+    | { type: 'SET_THEME'; theme: AppState['theme'] }
+    | { type: 'SET_TEXT_SIZE'; size: AppState['textSize'] }
     | { type: 'LOAD_STATE'; state: Partial<AppState> };
 
 // Reducer
@@ -91,6 +94,8 @@ function appReducer(state: AppState, action: Action): AppState {
             return { ...state, isSettingsOpen: !state.isSettingsOpen };
         case 'SET_THEME':
             return { ...state, theme: action.theme };
+        case 'SET_TEXT_SIZE':
+            return { ...state, textSize: action.size };
         case 'LOAD_STATE':
             return { ...state, ...action.state };
         default:
@@ -122,7 +127,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
                 const loadedState: Partial<AppState> = {
                     sessions: sessions || [],
                     apiKeys: storedSettings.apiKeys || {},
-                    theme: storedSettings.theme || 'dark',
+                    theme: storedSettings.theme || 'dark', // 'system' isn't default yet, let's stick to dark/simplicity
+                    textSize: storedSettings.textSize || 'medium',
                     defaultModelConfig: storedSettings.defaultModelConfig || initialState.defaultModelConfig
                 };
 
@@ -136,6 +142,43 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         loadState();
     }, []);
 
+    // Apply Theme & Text Size to Body
+    useEffect(() => {
+        if (!isHydrated) return;
+
+        const root = document.documentElement;
+
+        // Text Size
+        root.setAttribute('data-text-size', state.textSize);
+
+        const applyTheme = () => {
+            if (state.theme === 'system') {
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                root.setAttribute('data-theme', systemTheme);
+            } else {
+                root.setAttribute('data-theme', state.theme);
+            }
+        };
+
+        applyTheme();
+
+        // Listener for system changes
+        if (state.theme === 'system') {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleChange = () => applyTheme();
+
+            if (mediaQuery.addEventListener) {
+                mediaQuery.addEventListener('change', handleChange);
+                return () => mediaQuery.removeEventListener('change', handleChange);
+            } else {
+                // Fallback
+                mediaQuery.addListener(handleChange);
+                return () => mediaQuery.removeListener(handleChange);
+            }
+        }
+
+    }, [state.theme, state.textSize, isHydrated]);
+
     // Save Settings Changes
     useEffect(() => {
         if (!isHydrated) return;
@@ -143,10 +186,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             const { storage } = await import('@/services/storage');
             await storage.saveSetting('apiKeys', state.apiKeys);
             await storage.saveSetting('theme', state.theme);
+            await storage.saveSetting('textSize', state.textSize);
             await storage.saveSetting('defaultModelConfig', state.defaultModelConfig);
         };
         saveSettings();
-    }, [state.apiKeys, state.theme, state.defaultModelConfig, isHydrated]);
+    }, [state.apiKeys, state.theme, state.textSize, state.defaultModelConfig, isHydrated]);
 
     // Save Session Changes (Debounced manually + Force on Hide)
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);

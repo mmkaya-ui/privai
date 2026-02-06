@@ -33,7 +33,7 @@ export const Sidebar = () => {
     if (!state.isSidebarOpen) return null;
 
     return (
-        <aside className="h-full w-64 bg-bg-surface border-r border-border flex flex-col transition-all duration-300 ease-in-out shrink-0 z-20">
+        <aside className="fixed inset-0 w-full sm:static sm:w-64 h-full bg-bg-surface border-r border-border flex flex-col transition-all duration-300 ease-in-out shrink-0 z-20">
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ export const Sidebar = () => {
                 </div>
                 <button
                     onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-                    className="p-1 hover:bg-bg-highlight rounded text-text-muted hidden sm:block"
+                    className="p-1 hover:bg-bg-highlight rounded text-text-muted block"
                 >
                     <X size={20} />
                 </button>
