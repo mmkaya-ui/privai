@@ -58,7 +58,7 @@ export const ModelSelector = () => {
             </button>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-3 w-80 bg-glass border border-border rounded-2xl shadow-xl z-50 overflow-hidden animate-fade-in ring-1 ring-black/20">
+                <div className="absolute top-full left-0 mt-5 w-80 bg-glass border border-border rounded-2xl shadow-xl z-50 overflow-hidden animate-fade-in ring-1 ring-black/20">
                     {noModelsAvailable ? (
                         <div className="p-6 text-center">
                             <p className="text-sm text-text-muted mb-4 font-medium">No Neural Engines Connected</p>

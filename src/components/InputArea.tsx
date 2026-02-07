@@ -76,6 +76,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                         onKeyDown={handleKeyDown}
                         placeholder="Message PrivAI..."
                         className="w-full bg-transparent border-none text-text-main p-4 resize-none outline-none max-h-[200px] min-h-[56px] placeholder:text-text-faint"
+                        style={{ color: 'var(--color-text-main)' }}
                         disabled={disabled}
                         rows={1}
                     />

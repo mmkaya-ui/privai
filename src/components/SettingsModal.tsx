@@ -106,7 +106,7 @@ export const SettingsModal = () => {
                                 <div className="relative group">
                                     <input
                                         type={showKey[p.id] ? "text" : "password"}
-                                        className="w-full bg-bg-surface border border-border rounded-xl p-3.5 text-sm text-text-main outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200"
+                                        className="w-full bg-bg-base border border-border rounded-xl p-3.5 text-sm text-text-main outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200"
                                         placeholder={`Enter API Key for ${p.id}...`}
                                         value={keys[p.id] || ''}
                                         onChange={(e) => setKeys({ ...keys, [p.id]: e.target.value })}
