@@ -79,7 +79,7 @@
   --duration-fast: 150ms;
   --duration-normal: 250ms;
   --duration-slow: 400ms;
-  }
+
 
   /* OLED Theme (True Black) */
   [data-theme='oled'] {
