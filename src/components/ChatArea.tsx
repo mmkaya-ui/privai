@@ -169,12 +169,12 @@ export const ChatArea = () => {
     return (
         <div className="flex-1 flex flex-col h-full bg-bg-base relative transition-colors duration-300">
             {/* Header */}
-            <header className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0 bg-base-80 z-20 sticky top-0 shadow-sm">
+            <header className="px-6 py-4 flex items-center justify-between shrink-0 z-20 sticky top-0">
                 <div className="flex items-center gap-3">
                     {!state.isSidebarOpen && (
                         <button
                             onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-                            className="p-2 text-text-muted hover:text-text-main hover:bg-bg-surface-hover rounded-lg"
+                            className="p-2 text-text-muted hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                         >
                             <Menu size={20} />
                         </button>
@@ -203,11 +203,18 @@ export const ChatArea = () => {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar scroll-smooth" ref={scrollRef}>
-                <div className="max-w-3xl mx-auto space-y-6 pb-4">
+                <div className="max-w-3xl mx-auto space-y-6 pb-4 h-full flex flex-col">
                     {session.messages.length === 0 ? (
-                        <div className="text-center py-20 text-text-muted opacity-50">
-                            <h3 className="text-xl font-medium mb-2">Private. Secure. Powerful.</h3>
-                            <p className="text-sm">Start typing to begin.</p>
+                        <div className="flex-1 flex flex-col items-center justify-center -mt-20">
+                            <h3 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-text text-transparent bg-clip-text text-center"
+                                style={{
+                                    backgroundImage: 'linear-gradient(135deg, #FFD194 0%, #D1913C 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    color: 'transparent'
+                                }}
+                            >
+                                Private. Secure. Powerful.
+                            </h3>
                         </div>
                     ) : (
                         session.messages.map(m => (

@@ -33,28 +33,28 @@ export const Sidebar = () => {
     if (!state.isSidebarOpen) return null;
 
     return (
-        <aside className="fixed inset-0 w-full sm:static sm:w-64 h-full bg-bg-surface border-r border-border flex flex-col transition-all duration-300 ease-in-out shrink-0 z-20">
+        <aside className="fixed inset-0 w-full sm:static sm:w-64 h-full glass flex flex-col transition-all duration-300 ease-in-out shrink-0 z-20 border-r-0">
             {/* Header */}
-            <div className="p-4 border-b border-border flex items-center justify-between">
+            <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Logo size={28} />
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                    <h1 className="text-xl font-bold text-white tracking-wide">
                         PrivAI
                     </h1>
                 </div>
                 <button
                     onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-                    className="p-1 hover:bg-bg-highlight rounded text-text-muted block"
+                    className="p-1 hover:bg-white/10 rounded text-text-muted block"
                 >
                     <X size={20} />
                 </button>
             </div>
 
             {/* New Chat */}
-            <div className="p-3">
+            <div className="px-3 pb-2">
                 <button
                     onClick={handleNewChat}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white p-3.5 rounded-xl font-semibold shadow-lg hover:shadow-glow active:scale-95 transform transition-all duration-200"
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white p-3.5 rounded-xl font-semibold shadow-lg hover:shadow-glow active:scale-95 transform transition-all duration-200 border border-white/10"
                 >
                     <PlusCircle size={20} />
                     <span>New Chat</span>
@@ -76,12 +76,12 @@ export const Sidebar = () => {
                         className={`
                             group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all border border-transparent
                             ${state.currentSessionId === session.id
-                                ? 'bg-bg-highlight text-text-main shadow-sm border-border-highlight'
-                                : 'text-text-muted hover:bg-bg-surface-hover hover:text-text-main'}
+                                ? 'bg-white/10 text-white shadow-sm border-white/10 backdrop-blur-sm'
+                                : 'text-text-muted hover:bg-white/5 hover:text-white'}
                         `}
                     >
                         <div className="flex items-center gap-3 overflow-hidden">
-                            <MessageSquare size={18} className="shrink-0" />
+                            <MessageSquare size={18} className="shrink-0 opacity-70" />
                             <span className="truncate text-sm font-medium">{session.title}</span>
                         </div>
                         <button
@@ -96,23 +96,18 @@ export const Sidebar = () => {
             </div>
 
             {/* Footer / Motto */}
-            <div className="p-4 border-t border-border mt-auto bg-bg-surface-hover">
+            <div className="p-4 mt-auto">
                 <button
                     onClick={() => dispatch({ type: 'TOGGLE_SETTINGS' })}
-                    className="flex items-center gap-3 w-full p-3 text-text-main bg-bg-surface hover:bg-bg-highlight rounded-xl transition-all duration-200 mb-6 shadow-sm border border-border"
+                    className="flex flex-col items-start gap-1 w-full p-4 text-text-main bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200 mb-6 border border-white/5 backdrop-blur-md"
                 >
-                    <Settings size={20} className="text-text-muted" />
-                    <span className="font-medium">Settings</span>
+                    <div className="flex items-center gap-2 text-text-muted mb-1">
+                        <Settings size={16} />
+                        <span className="text-xs font-semibold uppercase tracking-wider">Settings</span>
+                    </div>
+                    <span className="font-bold text-sm">PRIVATE BY DESIGN</span>
+                    <span className="text-[10px] text-text-faint">Intelligent by Nature</span>
                 </button>
-
-                <div className="text-center pb-2">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-text-faint font-extrabold">
-                        Private by Design
-                    </p>
-                    <p className="text-[10px] text-text-faint mt-1 font-medium opacity-60">
-                        Intelligent by Nature
-                    </p>
-                </div>
             </div>
         </aside>
     );

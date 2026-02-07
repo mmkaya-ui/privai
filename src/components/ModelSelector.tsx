@@ -43,22 +43,22 @@ export const ModelSelector = () => {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 p-2 rounded-xl hover:bg-bg-highlight/50 transition-all duration-200 text-left border border-transparent hover:border-border"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 text-left group"
             >
                 <div className="flex flex-col">
-                    <span className="text-[10px] text-primary font-black uppercase tracking-[0.2em] leading-none mb-1">Compute Core</span>
-                    <div className="flex items-center gap-1.5">
-                        {currentModel?.isFree ? <Sparkles size={12} className="text-accent-green" /> : <Zap size={12} className="text-accent-yellow" />}
-                        <span className="font-bold text-sm sm:text-base text-text-main">
+                    <span className="text-[10px] text-accent-yellow font-bold uppercase tracking-wider leading-none mb-0.5 opacity-80 group-hover:opacity-100 transition-opacity">COMPUTE CORE</span>
+                    <div className="flex items-center gap-2">
+                        <Sparkles size={12} className="text-accent-yellow" />
+                        <span className="font-semibold text-sm text-white/90 group-hover:text-white transition-colors">
                             {currentModel?.name || state.defaultModelConfig.modelId}
                         </span>
                     </div>
                 </div>
-                <ChevronDown size={16} className={`text-text-faint transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-text-muted transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-5 w-80 bg-glass border border-border rounded-2xl shadow-xl z-50 overflow-hidden animate-fade-in ring-1 ring-black/20">
+                <div className="absolute top-full left-0 mt-2 w-80 glass rounded-2xl shadow-2xl z-50 overflow-hidden animate-fade-in ring-1 ring-white/10">
                     {noModelsAvailable ? (
                         <div className="p-6 text-center">
                             <p className="text-sm text-text-muted mb-4 font-medium">No Neural Engines Connected</p>
