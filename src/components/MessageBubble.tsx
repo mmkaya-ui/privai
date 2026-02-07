@@ -20,7 +20,6 @@ export const MessageBubble = React.memo(({ message }: MessageBubbleProps) => {
     };
 
     return (
-    return (
         <div className={`flex gap-4 p-5 rounded-2xl ${isUser ? 'bg-white/5 ml-auto max-w-[80%]' : 'max-w-[80%]'} group transition-all duration-200 hover:bg-white/5`}>
             {!isUser && (
                 <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm bg-gradient-to-br from-indigo-500 to-purple-600`}>
