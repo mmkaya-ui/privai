@@ -20,7 +20,9 @@ export const OpenAIAdapter: LLMProviderAdapter = {
                     role: m.role,
                     content: m.content
                 })),
-                temperature: config.temperature,
+                ...((!config.modelId.startsWith('o1') && !config.modelId.startsWith('o3')) && {
+                    temperature: config.temperature
+                }),
                 stream: true
             })
         });

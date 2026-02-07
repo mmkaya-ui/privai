@@ -12,30 +12,24 @@ export const Logo = ({ size = 32, className = "" }: { size?: number, className?:
         >
             <defs>
                 <linearGradient id="logo_grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#60a5fa" />
-                    <stop offset="100%" stopColor="#a855f7" />
+                    <stop offset="0%" stopColor="#667eea" />
+                    <stop offset="100%" stopColor="#764ba2" />
                 </linearGradient>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+                    <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
             </defs>
+            <rect x="4" y="4" width="24" height="24" rx="6" stroke="url(#logo_grad)" strokeWidth="2" filter="url(#glow)" />
             <path
-                d="M16 2C11 2 6 5 4 10C4 15 6 22 16 28C26 22 28 15 28 10C26 5 21 2 16 2Z"
-                stroke="url(#logo_grad)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path
-                d="M16 8C14.5 8 13.5 9 13.5 10.5C13.5 12 14.5 13 16 13C17.5 13 18.5 12 18.5 10.5C18.5 9 17.5 8 16 8Z"
+                d="M16 8L22 16L16 24L10 16L16 8Z"
                 fill="url(#logo_grad)"
+                fillOpacity="0.8"
             />
-            <path
-                d="M16 13V18"
-                stroke="url(#logo_grad)"
-                strokeWidth="2"
-                strokeLinecap="round"
-            />
-            <circle cx="12" cy="20" r="1.5" fill="var(--color-text-main)" />
-            <circle cx="16" cy="21" r="1.5" fill="var(--color-text-main)" />
-            <circle cx="20" cy="20" r="1.5" fill="var(--color-text-main)" />
+            <circle cx="16" cy="16" r="3" fill="white" filter="url(#glow)" />
         </svg>
     );
 };

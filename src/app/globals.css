@@ -1,29 +1,43 @@
 :root {
-  /* HSL Colors */
+  /* Modern 2026 Color System */
   --hue-primary: 217;
   --saturation-primary: 91%;
   --lightness-primary: 60%;
 
-  --hue-bg: 220;
-  --saturation-bg: 15%;
-  --lightness-bg: 10%;
-  /* Very dark blue-grey */
+  --hue-bg: 225;
+  --saturation-bg: 20%;
+  --lightness-bg: 8%;
 
+  /* Primary with glow */
   --color-primary: hsl(var(--hue-primary), var(--saturation-primary), var(--lightness-primary));
-  --color-primary-hover: hsl(var(--hue-primary), var(--saturation-primary), 50%);
+  --color-primary-hover: hsl(var(--hue-primary), var(--saturation-primary), 55%);
+  --color-primary-glow: hsla(var(--hue-primary), var(--saturation-primary), var(--lightness-primary), 0.4);
 
+  /* Sophisticated dark backgrounds */
   --color-bg-base: hsl(var(--hue-bg), var(--saturation-bg), var(--lightness-bg));
-  --color-bg-surface: hsl(var(--hue-bg), var(--saturation-bg), 14%);
-  /* Slightly lighter */
-  --color-bg-surface-hover: hsl(var(--hue-bg), var(--saturation-bg), 18%);
-  --color-bg-highlight: hsl(var(--hue-bg), var(--saturation-bg), 22%);
+  --color-bg-surface: hsl(var(--hue-bg), var(--saturation-bg), 12%);
+  --color-bg-surface-hover: hsl(var(--hue-bg), var(--saturation-bg), 16%);
+  --color-bg-highlight: hsl(var(--hue-bg), var(--saturation-bg), 20%);
 
+  /* High contrast text */
   --color-text-main: hsl(0, 0%, 98%);
-  --color-text-muted: hsl(220, 10%, 75%);
-  --color-text-faint: hsl(220, 10%, 55%);
+  --color-text-muted: hsl(220, 15%, 70%);
+  --color-text-faint: hsl(220, 10%, 50%);
 
-  --color-border: hsl(220, 10%, 20%);
-  --color-border-highlight: hsl(220, 10%, 30%);
+  /* Subtle borders */
+  --color-border: hsla(220, 20%, 30%, 0.5);
+  --color-border-highlight: hsla(220, 20%, 40%, 0.6);
+
+  /* Accent colors */
+  --color-accent-green: #10b981;
+  --color-accent-yellow: #f59e0b;
+  --color-accent-red: #ef4444;
+  --color-accent-purple: #8b5cf6;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-surface: linear-gradient(180deg, hsla(var(--hue-bg), var(--saturation-bg), 14%, 0.8), hsla(var(--hue-bg), var(--saturation-bg), 10%, 0.9));
+  --gradient-glow: radial-gradient(ellipse at center, var(--color-primary-glow) 0%, transparent 70%);
 
   /* Spacing */
   --safe-area-top: env(safe-area-inset-top, 0px);
@@ -38,19 +52,26 @@
   /* Text Scaling Base */
   --font-scale: 1;
 
-  /* Radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  /* Modern Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* Enhanced Shadows */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.15), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 40px -10px rgb(0 0 0 / 0.3);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
 
-  /* Transitions */
+  /* Smooth Transitions */
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
 }
 
 /* OLED Theme (True Black) */
@@ -62,19 +83,28 @@
   --color-border: #333333;
 }
 
-/* Light Theme */
+/* Light Theme - Complete overhaul for proper contrast */
 [data-theme='light'] {
   --hue-bg: 220;
-  --saturation-bg: 20%;
-  --lightness-bg: 98%;
-  --color-bg-base: hsl(var(--hue-bg), var(--saturation-bg), var(--lightness-bg));
+  --saturation-bg: 15%;
+  --lightness-bg: 97%;
+
+  --color-bg-base: hsl(220, 15%, 97%);
   --color-bg-surface: #ffffff;
-  --color-bg-surface-hover: hsl(220, 10%, 96%);
-  /* Reverse text colors - higher contrast for light mode */
-  --color-text-main: hsl(220, 30%, 10%);
-  --color-text-muted: hsl(220, 15%, 35%);
-  --color-text-faint: hsl(220, 10%, 50%);
-  --color-border: hsl(220, 15%, 88%);
+  --color-bg-surface-hover: hsl(220, 15%, 94%);
+  --color-bg-highlight: hsl(220, 15%, 90%);
+
+  /* Dark text for light backgrounds */
+  --color-text-main: hsl(220, 30%, 15%);
+  --color-text-muted: hsl(220, 20%, 40%);
+  --color-text-faint: hsl(220, 15%, 55%);
+
+  --color-border: hsl(220, 20%, 85%);
+  --color-border-highlight: hsl(220, 20%, 75%);
+
+  /* Adjust primary for light theme */
+  --color-primary: hsl(217, 91%, 50%);
+  --color-primary-hover: hsl(217, 91%, 40%);
 }
 
 /* Font Size Scaling */
@@ -136,6 +166,72 @@ body {
   gap: 0.5rem;
 }
 
+.gap-1 {
+  gap: 0.25rem;
+}
+
+.gap-1\.5 {
+  gap: 0.375rem;
+}
+
+.gap-3 {
+  gap: 0.75rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+/* Padding utilities */
+.p-1 {
+  padding: 0.25rem;
+}
+
+.p-2 {
+  padding: 0.5rem;
+}
+
+.p-2\.5 {
+  padding: 0.625rem;
+}
+
+.p-3 {
+  padding: 0.75rem;
+}
+
+.p-3\.5 {
+  padding: 0.875rem;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.px-3 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.py-2\.5 {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+
 /* Utilities */
 .flex {
   display: flex;
@@ -179,6 +275,96 @@ body {
 
 .hidden {
   display: none;
+}
+
+/* Dimension utilities */
+.w-8 {
+  width: 2rem;
+}
+
+.h-8 {
+  height: 2rem;
+}
+
+.w-9 {
+  width: 2.25rem;
+}
+
+.h-9 {
+  height: 2.25rem;
+}
+
+.w-72 {
+  width: 18rem;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+/* Spacing margin/padding */
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-3 {
+  margin-bottom: 0.75rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-3 {
+  margin-top: 0.75rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mt-auto {
+  margin-top: auto;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+/* Padding single values */
+.py-0\.5 {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+
+.py-1\.5 {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+.p-5 {
+  padding: 1.25rem;
+}
+
+.p-1\.5 {
+  padding: 0.375rem;
+}
+
+/* Placeholder styling */
+.placeholder\:text-text-faint::placeholder {
+  color: var(--color-text-faint);
+}
+
+.placeholder\:text-text-muted::placeholder {
+  color: var(--color-text-muted);
 }
 
 /* Custom Scrollbar */
@@ -265,6 +451,20 @@ p {
 
 .input:focus {
   border-color: var(--color-primary);
+}
+
+/* Fix for Chrome Autofill background color */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--color-bg-surface) inset !important;
+  -webkit-text-fill-color: var(--color-text-main) !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .card {
@@ -370,6 +570,42 @@ p {
   border-color: transparent;
 }
 
+/* Modern Gradient Backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-surface {
+  background: var(--gradient-surface);
+}
+
+/* Glow Effects */
+.shadow-glow {
+  box-shadow: 0 0 30px var(--color-primary-glow), 0 10px 40px -10px rgba(102, 126, 234, 0.4);
+}
+
+.hover\:shadow-glow:hover {
+  box-shadow: 0 0 30px var(--color-primary-glow), 0 10px 40px -10px rgba(102, 126, 234, 0.4);
+}
+
+/* Modern Shadow Utilities */
+.shadow-xl {
+  box-shadow: var(--shadow-xl);
+}
+
+.shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+/* Focus-within utilities for input containers */
+.focus-within\:border-primary:focus-within {
+  border-color: var(--color-primary);
+}
+
+.focus-within\:shadow-glow:focus-within {
+  box-shadow: 0 0 20px var(--color-primary-glow), 0 4px 20px -4px rgba(102, 126, 234, 0.3);
+}
+
 /* Gradients */
 .bg-gradient-to-r {
   background-image: linear-gradient(to right, var(--tw-gradient-stops));
@@ -391,6 +627,65 @@ p {
 
 .text-transparent {
   color: transparent;
+}
+
+/* Modern Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s var(--ease-smooth) forwards;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Modern Borders & Rings */
+.ring-1 {
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.ring-white\/10 {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.border-white\/10 {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Typography */
+.font-black {
+  font-weight: 900;
+}
+
+.font-extrabold {
+  font-weight: 800;
+}
+
+.tracking-widest {
+  letter-spacing: 0.1em;
 }
 
 /* Spacing & Layout extensions */
@@ -466,6 +761,10 @@ p {
 
 .rounded-xl {
   border-radius: 1rem;
+}
+
+.rounded-2xl {
+  border-radius: 1.25rem;
 }
 
 .rounded-full {
@@ -933,13 +1232,24 @@ p {
 }
 
 .bg-base-80 {
-  background-color: hsla(220, 15%, 10%, 0.8);
+  background-color: hsla(var(--hue-bg), var(--saturation-bg), var(--lightness-bg), 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-[data-theme='light'] .bg-base-80 {
-  background-color: hsla(220, 20%, 98%, 0.8);
+.bg-glass {
+  background: hsla(var(--hue-bg), var(--saturation-bg), 15%, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-highlight);
 }
 
-[data-theme='oled'] .bg-base-80 {
-  background-color: rgba(0, 0, 0, 0.8);
+[data-theme='light'] .bg-glass {
+  background: hsla(220, 15%, 100%, 0.7);
+  /* Inherit border from base class */
+}
+
+.bg-black-60 {
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
 }

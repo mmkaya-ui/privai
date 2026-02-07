@@ -123,31 +123,47 @@ export const AVAILABLE_MODELS: AIModelDefinition[] = [
         description: 'Advanced reasoning model'
     },
 
-    // Paid Models - Gemini
+    // Futuristic Models (2025-2026)
     {
-        id: 'gemini-2.0-flash',
-        name: 'Gemini 2.0 Flash',
-        providerId: 'gemini',
+        id: 'o3-mini',
+        name: 'OpenAI o3-mini',
+        providerId: 'openai',
         isFree: false,
-        contextWindow: 1000000,
-        description: 'Google\'s latest fast model'
+        contextWindow: 128000,
+        description: 'OpenAI\'s latest reasoning model'
     },
     {
-        id: 'gemini-1.5-pro',
-        name: 'Gemini 1.5 Pro',
+        id: 'gpt-5-preview',
+        name: 'GPT-5 Preview',
+        providerId: 'openai',
+        isFree: false,
+        contextWindow: 1000000,
+        description: 'Next-gen intelligence'
+    },
+    {
+        id: 'gemini-3-pro-exp',
+        name: 'Gemini 3 Pro (Exp)',
         providerId: 'gemini',
         isFree: false,
-        contextWindow: 2000000,
-        description: 'Large context window model'
+        contextWindow: 10000000,
+        description: '2026 Era Experimental Release'
+    },
+    {
+        id: 'claude-4-sonnet-preview',
+        name: 'Claude 4 Sonnet',
+        providerId: 'anthropic',
+        isFree: false,
+        contextWindow: 500000,
+        description: 'Ultra-advanced reasoning'
     },
 ];
 
 // Helper to get models available based on API keys
 export function getAvailableModels(apiKeys: Record<string, string>): AIModelDefinition[] {
+    // If we have an API key, all models for that provider become available
     return AVAILABLE_MODELS.filter(model => {
         if (model.isFree) {
-            // Free models require groq key
-            return !!apiKeys['groq'];
+            return true; // Always show free models, Groq key check happens in adapter
         }
         return !!apiKeys[model.providerId];
     });

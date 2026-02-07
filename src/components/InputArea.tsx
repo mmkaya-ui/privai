@@ -68,23 +68,23 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                     </div>
                 )}
 
-                <div className="relative bg-bg-surface border border-border rounded-xl shadow-sm focus-within:border-primary transition-colors flex flex-col">
+                <div className="relative bg-bg-surface border border-border rounded-2xl shadow-lg focus-within:border-primary focus-within:shadow-glow transition-all duration-300 flex flex-col overflow-hidden">
                     <textarea
                         ref={textareaRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Message PrivAI..."
-                        className="w-full bg-transparent border-none text-text-main p-3 resize-none outline-none max-h-[200px] min-h-[50px]"
+                        className="w-full bg-transparent border-none text-text-main p-4 resize-none outline-none max-h-[200px] min-h-[56px] placeholder:text-text-faint"
                         disabled={disabled}
                         rows={1}
                     />
 
-                    <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center justify-between p-3 border-t border-border bg-bg-surface-hover">
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="p-2 text-text-muted hover:text-text-main hover:bg-bg-surface-hover rounded-lg transition-colors"
+                                className="p-2.5 text-text-muted hover:text-text-main hover:bg-bg-highlight rounded-xl transition-all duration-200"
                             >
                                 <Paperclip size={20} />
                             </button>
@@ -100,7 +100,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                             </button> */}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                             <small className="text-text-faint text-xs hidden sm:block">
                                 Enter to send, Shift+Enter for new line
                             </small>
@@ -108,10 +108,10 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                                 onClick={handleSend}
                                 disabled={(!input.trim() && attachments.length === 0) || disabled}
                                 className={`
-                                    p-2 rounded-lg transition-all
+                                    p-2.5 rounded-xl transition-all duration-200
                                     ${(!input.trim() && attachments.length === 0) || disabled
                                         ? 'bg-bg-highlight text-text-muted cursor-not-allowed'
-                                        : 'bg-primary text-white hover:bg-primary-hover shadow-md'}
+                                        : 'bg-gradient-primary text-white hover:shadow-glow shadow-md active:scale-95 transform'}
                                 `}
                             >
                                 <Send size={18} />

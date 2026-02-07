@@ -54,7 +54,7 @@ export const Sidebar = () => {
             <div className="p-3">
                 <button
                     onClick={handleNewChat}
-                    className="w-full flex items-center gap-2 bg-primary hover:bg-primary-hover text-white p-3 rounded-lg transition-colors font-medium shadow-sm active:scale-95 transform duration-100"
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white p-3.5 rounded-xl font-semibold shadow-lg hover:shadow-glow active:scale-95 transform transition-all duration-200"
                 >
                     <PlusCircle size={20} />
                     <span>New Chat</span>
@@ -96,20 +96,20 @@ export const Sidebar = () => {
             </div>
 
             {/* Footer / Motto */}
-            <div className="p-4 border-t border-border mt-auto bg-bg-surface">
+            <div className="p-4 border-t border-border mt-auto bg-bg-surface-hover">
                 <button
                     onClick={() => dispatch({ type: 'TOGGLE_SETTINGS' })}
-                    className="flex items-center gap-3 w-full p-2 text-text-muted hover:text-text-main hover:bg-bg-surface-hover rounded-lg transition-colors mb-4"
+                    className="flex items-center gap-3 w-full p-3 text-text-main bg-bg-surface hover:bg-bg-highlight rounded-xl transition-all duration-200 mb-6 shadow-sm border border-border"
                 >
-                    <Settings size={20} />
-                    <span>Settings</span>
+                    <Settings size={20} className="text-text-muted" />
+                    <span className="font-medium">Settings</span>
                 </button>
 
-                <div className="text-center">
-                    <p className="text-[10px] uppercase tracking-widest text-text-faint font-bold">
+                <div className="text-center pb-2">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-text-faint font-extrabold">
                         Private by Design
                     </p>
-                    <p className="text-[10px] text-text-faint mt-1 italic">
+                    <p className="text-[10px] text-text-faint mt-1 font-medium opacity-60">
                         Intelligent by Nature
                     </p>
                 </div>
