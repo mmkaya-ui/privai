@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/lib/store';
 import { MessageBubble } from './MessageBubble';
 import { InputArea } from './InputArea';
-import { Menu, Square, WifiOff, Command, PanelRightOpen, PanelRightClose, Swords } from 'lucide-react';
+import { Menu, Square, WifiOff, Command, PanelRightOpen, PanelRightClose, Swords, Cpu, Zap, Key, BookOpen, ShieldCheck } from 'lucide-react';
 import { Message } from '@/types/llm';
 import { v4 as uuidv4 } from 'uuid';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -269,15 +269,22 @@ export const ChatArea = () => {
 
     if (!session) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-4 bg-bg-base text-center">
-                <div className="max-w-md space-y-6">
-                    <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                        PrivAI
-                    </h2>
-                    <p className="text-text-muted text-sm leading-relaxed">
-                        Secure, zero-telemetry AI workspace with native Local Ollama and BYOK endpoints.
-                        Your conversations never leave your device.
-                    </p>
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-bg-base text-center overflow-y-auto custom-scrollbar">
+                <div className="max-w-xl w-full space-y-6">
+                    <div className="space-y-2">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                            <ShieldCheck size={13} />
+                            <span>100% Client-Side • Zero Middleman Telemetry</span>
+                        </div>
+                        <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                            PrivAI Workspace
+                        </h2>
+                        <p className="text-text-muted text-sm leading-relaxed max-w-md mx-auto">
+                            Direct-to-provider inference, native offline Ollama, and encrypted local storage.
+                            No servers ever log or touch your prompts.
+                        </p>
+                    </div>
+
                     <button
                         onClick={() => {
                             const newSession = {
@@ -290,13 +297,88 @@ export const ChatArea = () => {
                             };
                             dispatch({ type: 'CREATE_SESSION', session: newSession });
                         }}
-                        className="btn btn-primary w-full py-3 shadow-lg hover:shadow-primary/20"
+                        className="btn btn-primary w-full py-3.5 shadow-lg hover:shadow-primary/20 font-bold text-sm tracking-wide"
                     >
                         Start New Chat
                     </button>
+
+                    {/* 3 Interactive Mode Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                        {/* Card 1: Local Ollama */}
+                        <div
+                            onClick={() => dispatch({ type: 'TOGGLE_SETTINGS', open: true })}
+                            className="group p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-border hover:border-emerald-500/40 cursor-pointer transition-all duration-200"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2.5">
+                                <Cpu size={16} />
+                            </div>
+                            <h4 className="text-xs font-bold text-text-main group-hover:text-emerald-300 transition-colors">
+                                Local Machine AI
+                            </h4>
+                            <p className="text-[11px] text-text-muted mt-1 leading-snug">
+                                Connect to Ollama or LM Studio on localhost. Zero network packets sent.
+                            </p>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-2.5">
+                                <BookOpen size={10} /> Setup Guide →
+                            </span>
+                        </div>
+
+                        {/* Card 2: WebGPU */}
+                        <div
+                            onClick={() => {
+                                const newSession = {
+                                    id: uuidv4(),
+                                    title: 'WebGPU Chat',
+                                    messages: [],
+                                    createdAt: Date.now(),
+                                    updatedAt: Date.now(),
+                                    modelConfig: {
+                                        provider: 'webllm' as const,
+                                        modelId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
+                                        temperature: 0.7
+                                    }
+                                };
+                                dispatch({ type: 'CREATE_SESSION', session: newSession });
+                            }}
+                            className="group p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-border hover:border-blue-500/40 cursor-pointer transition-all duration-200"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 mb-2.5">
+                                <Zap size={16} />
+                            </div>
+                            <h4 className="text-xs font-bold text-text-main group-hover:text-blue-300 transition-colors">
+                                In-Browser WebGPU
+                            </h4>
+                            <p className="text-[11px] text-text-muted mt-1 leading-snug">
+                                Run Llama 3.2 directly in this browser tab. Zero installs needed.
+                            </p>
+                            <span className="text-[10px] font-bold text-blue-400 mt-2.5 block">
+                                Launch in Tab →
+                            </span>
+                        </div>
+
+                        {/* Card 3: Cloud BYOK */}
+                        <div
+                            onClick={() => dispatch({ type: 'TOGGLE_SETTINGS', open: true })}
+                            className="group p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-border hover:border-purple-500/40 cursor-pointer transition-all duration-200"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 mb-2.5">
+                                <Key size={16} />
+                            </div>
+                            <h4 className="text-xs font-bold text-text-main group-hover:text-purple-300 transition-colors">
+                                Wholesale BYOK
+                            </h4>
+                            <p className="text-[11px] text-text-muted mt-1 leading-snug">
+                                Claude 3.5, DeepSeek R1, GPT-4o at raw token cost (~$0.0004/msg).
+                            </p>
+                            <span className="text-[10px] font-bold text-purple-400 mt-2.5 block">
+                                Enter Keys →
+                            </span>
+                        </div>
+                    </div>
+
                     {!isOnline && (
-                        <p className="text-yellow-500 font-medium text-xs flex items-center justify-center gap-2">
-                            <WifiOff size={14} /> Offline mode: Switch to Local Ollama for 100% offline chat
+                        <p className="text-yellow-400 font-medium text-xs flex items-center justify-center gap-2 bg-yellow-500/10 border border-yellow-500/20 py-2 rounded-xl">
+                            <WifiOff size={14} /> You are currently offline. Local Ollama & WebGPU work 100% offline!
                         </p>
                     )}
                 </div>

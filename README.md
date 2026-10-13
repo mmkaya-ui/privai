@@ -122,3 +122,36 @@ Visit [http://localhost:3000](http://localhost:3000). Use <kbd>Ctrl+K</kbd> or <
 npm run build
 npm run start
 ```
+
+---
+
+## Local LLM Setup Guide (Ollama & LM Studio)
+
+PrivAI can connect directly to open-source models running locally on your CPU/GPU with **zero network telemetry**.
+
+### Connecting to Ollama (60 Seconds)
+
+1. **Install Ollama:** Download from [ollama.com](https://ollama.com).
+2. **Enable Browser CORS:** Since PrivAI runs in your browser, Ollama must accept browser requests:
+   - **macOS / Linux:**
+     ```bash
+     OLLAMA_ORIGINS="*" ollama serve
+     ```
+   - **Windows (PowerShell):**
+     ```powershell
+     $env:OLLAMA_ORIGINS="*"
+     ollama serve
+     ```
+3. **Pull a Model:**
+   ```bash
+   ollama run llama3.2
+   # or DeepSeek R1 reasoning model:
+   ollama run deepseek-r1:8b
+   ```
+4. **Auto-Discovery in PrivAI:** Open PrivAI $\to$ **Settings** $\to$ **Local LLMs** $\to$ click **Test Connection**. PrivAI will detect your local Ollama instance and make all installed models selectable in the Model dropdown.
+
+### Connecting to LM Studio / LocalAI
+
+1. Open **LM Studio**, go to the **Local Server** tab (`<->`), and click **Start Server** (`http://localhost:1234`).
+2. Make sure **CORS** is enabled in the LM Studio server settings.
+3. In PrivAI **Settings**, enter `http://localhost:1234/v1` as the LM Studio Base URL.

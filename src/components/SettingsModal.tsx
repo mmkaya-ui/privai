@@ -15,7 +15,10 @@ import {
     Shield,
     Lock,
     Download,
-    Upload
+    Upload,
+    BookOpen,
+    ChevronDown,
+    ExternalLink
 } from 'lucide-react';
 import { checkOllamaConnection } from '@/services/ollama';
 import { encryptData, decryptData, EncryptedPrivAIPayload } from '@/services/crypto';
@@ -35,6 +38,7 @@ export const SettingsModal = () => {
         ok: false,
         message: ''
     });
+    const [showOllamaGuide, setShowOllamaGuide] = useState(false);
 
     // Zero-Knowledge Encrypted Backup State
     const [exportPassphrase, setExportPassphrase] = useState('');
@@ -313,6 +317,61 @@ export const SettingsModal = () => {
                                         <span>{ollamaStatus.message}</span>
                                     </div>
                                 )}
+
+                                {/* Step-by-Step Setup Guide Accordion */}
+                                <div className="rounded-xl border border-border/70 bg-bg-surface overflow-hidden">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOllamaGuide(!showOllamaGuide)}
+                                        className="w-full flex items-center justify-between p-3 text-xs font-bold text-text-main hover:bg-white/5 transition-colors text-left"
+                                    >
+                                        <div className="flex items-center gap-2 text-primary">
+                                            <BookOpen size={14} />
+                                            <span>Quick Setup Guide: How to Connect Ollama (60s)</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-[11px] text-text-muted">
+                                            <span>{showOllamaGuide ? 'Hide' : 'Show Instructions'}</span>
+                                            <ChevronDown size={14} className={`transform transition-transform ${showOllamaGuide ? 'rotate-180' : ''}`} />
+                                        </div>
+                                    </button>
+
+                                    {showOllamaGuide && (
+                                        <div className="p-4 pt-1 space-y-3.5 border-t border-border/50 text-xs text-text-muted bg-black/20">
+                                            <div>
+                                                <p className="font-semibold text-text-main mb-1">1. Install Ollama</p>
+                                                <p>Download and install Ollama from <a href="https://ollama.com" target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">ollama.com <ExternalLink size={10} /></a>.</p>
+                                            </div>
+
+                                            <div>
+                                                <p className="font-semibold text-text-main mb-1">2. Enable Browser CORS (Crucial)</p>
+                                                <p className="mb-1.5">Because PrivAI calls Ollama directly from your browser, Ollama requires permission to accept browser requests:</p>
+                                                <div className="space-y-2 font-mono text-[11px] bg-bg-base p-2.5 rounded-lg border border-border">
+                                                    <div>
+                                                        <span className="text-text-faint font-sans text-[10px] block">macOS / Linux Terminal:</span>
+                                                        <code className="text-emerald-400">OLLAMA_ORIGINS=&quot;*&quot; ollama serve</code>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-text-faint font-sans text-[10px] block">Windows PowerShell:</span>
+                                                        <code className="text-emerald-400">$env:OLLAMA_ORIGINS=&quot;*&quot;; ollama serve</code>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="font-semibold text-text-main mb-1">3. Download a Model</p>
+                                                <div className="font-mono text-[11px] bg-bg-base p-2.5 rounded-lg border border-border">
+                                                    <code className="text-emerald-400">ollama run llama3.2</code>
+                                                    <span className="text-text-faint font-sans text-[10px] block mt-1">Or run DeepSeek R1: <code className="text-emerald-400 font-mono">ollama run deepseek-r1:8b</code></span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="font-semibold text-text-main mb-1">4. Verify in PrivAI</p>
+                                                <p>Click the <strong className="text-primary">&quot;Test Connection&quot;</strong> button above. PrivAI will ping localhost:11434 and automatically discover your installed models in the Model Selector!</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* LM Studio Host */}
