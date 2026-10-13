@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PrivAI — Zero-Telemetry, Client-Side Multi-LLM Workspace
+
+A privacy-focused web client built with **Next.js**, **TypeScript**, and **IndexedDB** that interfaces directly with major LLM inference providers entirely from the browser. No intermediate servers, no proxy logging, and zero tracking.
+
+---
+
+## What It Solves
+
+Most web interfaces for LLMs route prompts, keys, and chat histories through centralized backend servers. 
+
+PrivAI eliminates the middleman:
+- **Direct-to-Provider Streaming:** The client browser dispatches requests directly to OpenAI, Anthropic, Groq, DeepSeek, or Google Gemini.
+- **Client-Only Persistence:** Chat histories and user settings are persisted exclusively in local IndexedDB (`idb`), never leaving the user's browser.
+- **BYOK (Bring Your Own Key):** API keys are stored in encrypted client-side storage and used only to authorize direct API calls.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    User([User]) <--> UI[Next.js PWA Client]
+    UI <--> IDB[(Local IndexedDB - idb)]
+    UI --> Router{Provider Adapter Registry}
+    Router -->|Direct Streaming| P1[OpenAI API]
+    Router -->|Direct Streaming| P2[Anthropic API]
+    Router -->|Direct Streaming| P3[Groq API]
+    Router -->|Direct Streaming| P4[DeepSeek API]
+    Router -->|Direct Streaming| P5[Google Gemini API]
+```
+
+---
+
+## Technical Highlights
+
+- **Adapter-Based Multi-Provider Engine:** Unified interface (`LLMProviderAdapter`) with custom async generator streaming implementations across five providers:
+  - OpenAI (`gpt-4o`, `o1`)
+  - Anthropic (`claude-3-5-sonnet`)
+  - Groq (Llama 3 ultra-low-latency streaming)
+  - DeepSeek (`deepseek-chat`, `deepseek-reasoner`)
+  - Google Gemini (`gemini-1.5-pro`, `gemini-1.5-flash`)
+- **PWA & Offline Capability:** Custom service worker enabling complete offline loading of past conversations and offline UI state.
+- **AbortSignal Integration:** Immediate token streaming cancellation on user stop.
+
+---
+
+## Tech Stack
+
+- **Framework:** Next.js (App Router), React
+- **Language:** TypeScript
+- **Storage:** IndexedDB (`idb`)
+- **Styling:** CSS Modules, Tailwind CSS
+- **PWA:** Service Worker (`sw.ts`)
+
+---
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+git clone https://github.com/mmkaya-ui/privai.git
+cd privai
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Visit [http://localhost:3000](http://localhost:3000) and enter your provider API keys under Settings to start chatting.
