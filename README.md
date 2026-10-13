@@ -1,138 +1,122 @@
-# PrivAI — Zero-Telemetry, Client-Side Multi-LLM Workspace
+# PrivAI — Zero-Telemetry Client-Side AI Workspace
 
-A privacy-focused, enterprise-grade AI workspace built with **Next.js 16**, **TypeScript**, and **IndexedDB** that interfaces directly with major LLM inference providers entirely from the browser. **No intermediate proxy servers, no telemetry logging, and zero tracking.**
-
----
-
-## What It Solves
-
-Most web interfaces for LLMs route prompts, proprietary code, sensitive API keys, and conversation histories through centralized backend servers.
-
-**PrivAI eliminates the middleman entirely:**
-- **Direct-to-Provider Streaming:** The client browser dispatches requests directly to OpenAI, Anthropic, Groq, DeepSeek, and Google Gemini via async generator streams.
-- **Native Local LLMs (Ollama & LM Studio):** Connects directly to local models running on your machine (`http://localhost:11434` or `http://localhost:1234`) with automated model detection and zero network telemetry.
-- **Client-Only Persistence:** Chat histories and user settings are persisted exclusively in local IndexedDB (`idb`), never touching an external database.
-- **Zero-Knowledge AES-256-GCM Portable Backups (`.privai`):** Export and restore your complete database with PBKDF2 passphrase encryption using the Web Crypto API.
-- **In-Browser Local Document RAG:** Drop PDFs, codebases, or Markdown files directly into the workspace. Documents are parsed, chunked, and vector-searched locally inside the browser tab with 0 bytes uploaded to any server.
-- **Multi-Model Battle Arena:** Stream 2 models simultaneously side-by-side against a single prompt with real-time speed (tok/s), latency (TTFT), and token telemetry.
-- **Split-Screen Artifacts Canvas:** Dedicated interactive drawer to view and run HTML, CSS, JavaScript, and SVG code in an isolated sandbox iframe.
+A zero-telemetry, developer-grade AI workspace running directly in your browser. PrivAI connects directly to commercial LLM inference APIs (OpenAI, Anthropic, DeepSeek, Groq, Google) and local machines (Ollama, LM Studio, in-browser WebGPU) with **no application server, no middleman database, and zero tracking**.
 
 ---
 
-## Architecture
+## The Problem PrivAI Solves
+
+### 1. The \$720/Year Subscription Trap vs. Wholesale Token Pricing
+Commercial web interfaces bundle models behind fixed **\$20/month subscriptions** (ChatGPT Plus, Claude Pro, Gemini Advanced). Maintaining access across ecosystems easily totals **\$60/month (\$720/year)**.
+
+- **Wholesale BYOK Reality:** When using raw developer APIs directly, costs are billed per token:
+  - **DeepSeek V3:** ~\$0.14 per 1,000,000 input tokens
+  - **GPT-4o-mini:** ~\$0.15 per 1,000,000 input tokens
+  - **Claude 3.5 Haiku:** ~\$0.80 per 1,000,000 input tokens
+- An active developer or researcher typically consumes **\$1.50 to \$3.00/month** in tokens for the exact same foundation models—saving **~95% to 98%**. PrivAI displays this telemetry live under each message.
+
+### 2. The Middleman Database Vulnerability
+Most open-source or self-hosted AI clients (LibreChat, Open WebUI, web chat wrappers) require an application backend and database (Node.js, PostgreSQL, MongoDB, Supabase).
+- If that server or database is compromised, **every plaintext prompt, proprietary source file, and API key is exposed**.
+- **PrivAI has no application server.** It is a static Progressive Web App (PWA). All chat sessions, API keys, and configurations are stored in your browser's private IndexedDB (`idb`) and encrypted at rest with **AES-256-GCM** using a master passphrase.
+
+### 3. Document Privacy in Retrieval (RAG)
+When you upload a confidential contract, financial statement, or private code to ChatGPT or Claude Web, the entire file is transmitted to cloud storage and processed through cloud vector pipelines.
+- **PrivAI In-Browser RAG:** Documents (PDFs, Markdown, source code) are parsed, chunked, and vector-searched locally inside the browser tab using an in-memory TF-IDF cosine similarity engine.
+- **0 bytes of the raw document leave your computer.** Only the 2–3 matching snippets needed to answer the immediate prompt are sent to the model.
+
+---
+
+## Architecture & Threat Model
 
 ```mermaid
 flowchart TD
-    User([User]) <--> UI[Next.js PWA Client]
-    UI <--> RAG[In-Browser Local RAG Engine]
-    UI <--> Crypto[AES-256-GCM Web Crypto Service]
-    UI <--> IDB[(Local IndexedDB - idb)]
-    UI --> Router{Provider Adapter Registry}
-    Router -->|Direct HTTPS Stream| P1[OpenAI API]
-    Router -->|Direct HTTPS Stream + Browser Header| P2[Anthropic API]
-    Router -->|Direct HTTPS Stream| P3[Groq API]
-    Router -->|Direct HTTPS Stream| P4[DeepSeek API]
-    Router -->|Direct HTTPS Stream| P5[Google Gemini API]
-    Router -->|Localhost IPC / Zero Telemetry| P6[Local Ollama / LM Studio]
+    subgraph Client_Boundary ["Client Security Boundary (Your Machine)"]
+        UI["PrivAI Next.js 16 PWA Client"]
+        IDB[("Encrypted Local IndexedDB (idb)")]
+        LocalRAG["In-Browser Vector RAG Engine\n(TF-IDF Cosine Similarity)"]
+        CryptoService["Web Crypto API\n(AES-256-GCM + PBKDF2)"]
+
+        UI <--> IDB
+        UI <--> LocalRAG
+        UI <--> CryptoService
+    end
+
+    subgraph Inference_Endpoints ["Inference Endpoints"]
+        UI -->|Direct HTTPS Stream + Browser Header| Anthropic["Anthropic API"]
+        UI -->|Direct HTTPS Stream| OpenAI["OpenAI / Custom Base URLs"]
+        UI -->|Direct HTTPS Stream| DeepSeek["DeepSeek API"]
+        UI -->|Direct HTTPS Stream| Groq["Groq API (LPU Inference)"]
+        UI -->|Direct HTTPS Stream| Gemini["Google Gemini API"]
+        UI -->|Localhost IPC / Zero Internet Traffic| Ollama["Local Ollama / LM Studio (11434 / 1234)"]
+        UI -->|In-Tab WebGPU / Zero Network Packets| WebLLM["WebLLM (Llama 3.2 / Gemma 2)"]
+    end
 ```
+
+### Data Boundary Breakdown
+
+| Data Asset | Traditional Web Chat (ChatGPT / Claude) | Standard Self-Hosted (LibreChat / Open WebUI) | PrivAI Workspace |
+| :--- | :--- | :--- | :--- |
+| **Chat History Storage** | Vendor Cloud Database | Middleman Database (Postgres / Mongo) | **Local IndexedDB (Your Browser Only)** |
+| **API Keys & Passphrases** | Stored on Vendor Servers | Stored on App Server | **Local Storage / Encrypted with AES-256-GCM** |
+| **Document Uploads (RAG)** | Transmitted to Cloud Vector DB | Transmitted to App Server Embedding Pipeline | **0 Bytes Uploaded (Parsed & Searched in Tab)** |
+| **Telemetry & Analytics** | Active (Mixpanel, Datadog, Internal Trackers) | Varies (Docker server logs all user requests) | **0% (Zero analytics SDKs, zero request logging)** |
+| **Model Training on Prompts** | Opt-out required on consumer web tiers | Dependent on keys used | **Excluded by default via Commercial API Terms** |
+| **Air-Gapped / Offline Use** | Impossible | Requires running full Docker container stack | **Supported out-of-the-box (Localhost & WebGPU)** |
 
 ---
 
-## Technical Highlights
+## Core Capabilities
 
-- **Unified Adapter-Based Multi-Provider Engine:** Standardized interface (`LLMProviderAdapter`) with custom async generator streaming implementations across top models:
-  - **Local Runtimes:** Native Ollama (`http://localhost:11434`), LM Studio (`http://localhost:1234/v1`), LocalAI, vLLM
-  - **Anthropic:** `claude-3-5-sonnet`, `claude-3-5-haiku` *(with `"anthropic-dangerous-direct-browser-access": "true"` CORS fix)*
-  - **OpenAI & Custom Proxies:** `gpt-4o`, `gpt-4o-mini`, `o3-mini`, plus OpenRouter / custom reverse proxy base URLs
-  - **Groq:** Ultra-fast Llama 3.3 70B & Mixtral streaming
-  - **DeepSeek:** `deepseek-chat` (V3), `deepseek-reasoner` (R1)
-  - **Google Gemini:** `gemini-1.5-pro`, `gemini-1.5-flash`
-- **In-Browser Document RAG Engine:** Client-side document text extraction, sliding-window chunking, and TF-IDF cosine vector retrieval entirely in the browser thread.
-- **Multi-Model Battle Arena:** Head-to-head concurrent streaming benchmark comparing time-to-first-token (TTFT), generation speed, and token output depth.
-- **Linear/Raycast Command Palette (`Cmd+K` / `Ctrl+K`):** Global modal for 1-keystroke model switching, full-text history search, theme toggling, and workspace commands.
-- **Production-Grade Code Blocks:** Prism syntax highlighting across 10+ languages with 1-click copy, download file, and "Open in Canvas" preview buttons.
-- **Client-Side Cryptography:** Master-passphrase AES-256-GCM encryption at rest with PBKDF2 (100,000 rounds) for zero-knowledge `.privai` export and restore.
-- **PWA & Offline Capability:** Next.js 16 App Router bundled with Serwist service worker for offline loading and local inference.
-- **In-Browser WebGPU LLMs:** Direct client-side inference powered by `@mlc-ai/web-llm` running Llama-3.2-1B and Gemma-2-2B locally on user GPU hardware with zero server dependency.
+### Direct-to-Provider Streaming
+- Directly streams from provider endpoints via asynchronous generator streams (`ReadableStream`).
+- Includes direct browser CORS handling (`"anthropic-dangerous-direct-browser-access": "true"` for Anthropic) and an optional stateless, zero-log Next.js Edge proxy route (`/api/proxy`) for endpoints requiring header normalization.
+- Supports custom base URLs (OpenRouter, Cloudflare AI Gateway, self-hosted proxies).
 
----
+### Native Local Machine LLMs (Ollama & LM Studio)
+- Native adapter connects directly to `http://localhost:11434` (Ollama) or `http://localhost:1234/v1` (LM Studio).
+- Automated connection tester and model auto-discovery with ping latency reporting.
+- Operates 100% offline with zero internet packets sent.
 
-## Feature Matrix
+### In-Browser WebGPU LLMs (`@mlc-ai/web-llm`)
+- Runs lightweight foundation models (`Llama-3.2-1B-Instruct`, `Gemma-2-2B-it`) directly inside the browser tab using WebGPU hardware acceleration.
+- Requires no local CLI installation. Once model weights are cached in browser CacheStorage, inference runs entirely offline inside the browser tab.
 
-- [x] **CORS Browser Direct Access:** Anthropic direct browser header + optional zero-log Edge proxy
-- [x] **Native Local LLMs:** Ollama and LM Studio auto-discovery and offline chat
-- [x] **In-Browser WebGPU LLMs:** Zero-install in-tab Llama-3.2-1B and Gemma-2B via WebGPU
-- [x] **In-Browser Local Document RAG:** Zero-server PDF/Markdown/Code chunking and vector retrieval
-- [x] **Multi-Model Battle Arena:** Concurrent side-by-side model benchmarking with TTFT and tok/s
-- [x] **Conversation Branching:** In-place prompt editing with `< 1 / 2 >` tree variation navigation
-- [x] **Command Palette (`Cmd+K`):** Raycast-style instant model switcher and history search
-- [x] **Split-Screen Artifacts Canvas:** Live sandboxed HTML/JS/SVG preview runner
-- [x] **Client-Side Cryptography:** AES-256-GCM encrypted `.privai` backups
-- [x] **Production Syntax Highlighting:** Tokyo Night / GitHub Dark themes with Prism
-- [x] **Live Token & Cost Telemetry:** Real-time tokens, tok/s, duration, and BYOK savings pill
+### In-Browser Document RAG Engine
+- Drop PDF, Markdown, TypeScript, Python, or plaintext files into the prompt area.
+- Ingests text, applies sliding-window chunking, computes term-frequency matrices, and extracts cosine-ranked semantic matches directly on the client thread.
+- Displays match confidence pills (`Match Relevance: 84%`) on generated assistant messages.
 
----
+### Multi-Model Battle Arena
+- Real-time head-to-head benchmarking. Submit a prompt once and stream two different models simultaneously side-by-side (e.g., Claude 3.5 Sonnet vs. DeepSeek R1).
+- Live metrics display: **Time-to-First-Token (TTFT)**, **tokens/sec**, **total tokens generated**, and **winner voting**.
 
-## Tech Stack
+### Linear/Raycast Command Palette (`Cmd+K` / `Ctrl+K`)
+- Switch models in one keystroke.
+- Full-text search across all IndexedDB conversation history.
+- Quick actions: clear context, toggle Battle Arena, export backup, toggle dark/OLED themes.
 
-- **Framework:** Next.js 16 (App Router), React 19
-- **Language:** TypeScript
-- **State & Storage:** IndexedDB (`idb`)
-- **In-Browser WebGPU:** `@mlc-ai/web-llm`
-- **Cryptography:** Web Crypto API (`SubtleCrypto` AES-GCM + PBKDF2)
-- **Syntax Highlighting:** Prism.js
-- **Icons & Motion:** Lucide Icons, Framer Motion
-- **PWA Service Worker:** `@serwist/next`, `@serwist/sw`
+### Split-Screen Artifacts Canvas & Live Code Sandbox
+- Multi-language syntax highlighting powered by Prism (Tokyo Night / GitHub Dark themes).
+- 1-click code copying, dynamic file downloading with automatic file extensions, and an isolated `<iframe>` runner sandbox to execute HTML, JavaScript, and SVG snippets in real time.
 
----
+### Conversation Branching (`< 1 / 2 >`)
+- In-place prompt editing creates persistent conversation branch trees. Traverse alternate prompt iterations without losing original outputs.
 
-## Getting Started
-
-### 1. Installation
-
-```bash
-git clone https://github.com/mmkaya-ui/privai.git
-cd privai
-npm install
-```
-
-### 2. Validation & Test Suites
-
-Run the automated offline unit tests and mock prompt streaming simulations:
-
-```bash
-# Run all tests (AES-256-GCM crypto, Local RAG, Provider streams & E2E simulation)
-npm test
-
-# Run the end-to-end simulated prompt stream test only
-npm run test:prompt
-```
-
-### 3. Development
-
-```bash
-npm run dev
-```
-
-Visit [http://localhost:3000](http://localhost:3000). Use <kbd>Ctrl+K</kbd> or <kbd>⌘K</kbd> to open the Command Palette, switch models, or open **Settings** to configure Ollama or your BYOK keys.
-
-### 4. Production Build
-
-```bash
-npm run build
-npm run start
-```
+### Zero-Knowledge Encrypted Backups (`.privai`)
+- Single-click export of your entire IndexedDB database into an encrypted `.privai` file using **AES-256-GCM** with a PBKDF2-derived key (100,000 iterations).
+- Seamlessly restore conversations on another machine without creating a cloud account.
 
 ---
 
 ## Local LLM Setup Guide (Ollama & LM Studio)
 
-PrivAI can connect directly to open-source models running locally on your CPU/GPU with **zero network telemetry**.
+PrivAI can connect directly to open-source models running locally on your hardware.
 
-### Connecting to Ollama (60 Seconds)
+### Connecting to Ollama (60-Second Setup)
 
-1. **Install Ollama:** Download from [ollama.com](https://ollama.com).
-2. **Enable Browser CORS:** Since PrivAI runs in your browser, Ollama must accept browser requests:
+1. **Install Ollama:** Download from [ollama.com](https://ollama.com) (macOS, Windows, Linux).
+2. **Enable Browser CORS:** Since PrivAI runs in your browser, Ollama needs permission to accept browser requests:
    - **macOS / Linux:**
      ```bash
      OLLAMA_ORIGINS="*" ollama serve
@@ -148,10 +132,53 @@ PrivAI can connect directly to open-source models running locally on your CPU/GP
    # or DeepSeek R1 reasoning model:
    ollama run deepseek-r1:8b
    ```
-4. **Auto-Discovery in PrivAI:** Open PrivAI $\to$ **Settings** $\to$ **Local LLMs** $\to$ click **Test Connection**. PrivAI will detect your local Ollama instance and make all installed models selectable in the Model dropdown.
+4. **Auto-Discovery in PrivAI:** Open PrivAI $\to$ **Settings** $\to$ **Local LLMs** $\to$ click **Test Connection**. PrivAI will detect your local Ollama instance and automatically populate all installed models into the selector.
 
 ### Connecting to LM Studio / LocalAI
 
-1. Open **LM Studio**, go to the **Local Server** tab (`<->`), and click **Start Server** (`http://localhost:1234`).
-2. Make sure **CORS** is enabled in the LM Studio server settings.
-3. In PrivAI **Settings**, enter `http://localhost:1234/v1` as the LM Studio Base URL.
+1. Open **LM Studio**, navigate to the **Local Server** tab (`<->`), and click **Start Server** (`http://localhost:1234`).
+2. Ensure **CORS** is enabled in the LM Studio server settings.
+3. In PrivAI **Settings**, set `http://localhost:1234/v1` as the LM Studio Base URL.
+
+---
+
+## Tech Stack & Verification
+
+- **Framework:** Next.js 16 (App Router), React 19
+- **Type Safety:** TypeScript (strict mode, zero `any` policy)
+- **Local Database:** IndexedDB via `idb`
+- **In-Browser WebGPU:** `@mlc-ai/web-llm`
+- **Cryptography:** Web Crypto API (`SubtleCrypto` AES-256-GCM, PBKDF2)
+- **PWA Service Worker:** `@serwist/next`, `@serwist/sw` (offline precaching)
+- **Syntax Engine:** Prism.js
+
+### Running Tests
+
+PrivAI includes automated unit testing for cryptographic roundtrips, in-memory document RAG, provider streaming, and simulated end-to-end prompt processing:
+
+```bash
+# Run all tests (AES-256-GCM crypto, Local RAG, Provider streams & E2E prompt simulation)
+npm test
+
+# Run the end-to-end simulated prompt stream test only
+npm run test:prompt
+
+# Run ESLint validation
+npm run lint
+
+# Build for production
+npm run build
+```
+
+---
+
+## Getting Started
+
+```bash
+git clone https://github.com/mmkaya-ui/privai.git
+cd privai
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Use <kbd>Ctrl+K</kbd> or <kbd>⌘K</kbd> to open the Command Palette, switch models, or open **Settings** to configure Ollama or your BYOK keys.
