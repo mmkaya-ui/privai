@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/test-privai-engine.mjs"
+    "test": "node scripts/test-privai-engine.mjs && node scripts/test-e2e-mock-chat.mjs",
+    "test:prompt": "node scripts/test-e2e-mock-chat.mjs"
   },
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.86",
