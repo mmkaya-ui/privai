@@ -137,7 +137,7 @@ export const ArenaView = () => {
     return (
         <div className="flex-1 flex flex-col h-full bg-bg-base overflow-hidden">
             {/* Arena Header */}
-            <header className="px-6 py-4 border-b border-border bg-[#161b22] flex items-center justify-between shrink-0">
+            <header className="px-6 py-4 border-b border-border bg-bg-surface flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-red-600 flex items-center justify-center shadow-md">
                         <Swords size={18} className="text-white" />
@@ -179,7 +179,7 @@ export const ArenaView = () => {
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border overflow-hidden">
                 {/* Side A */}
                 <div className="flex flex-col h-full overflow-hidden bg-bg-base/50">
-                    <div className="p-3.5 border-b border-border/80 bg-[#161b22]/70 flex items-center justify-between">
+                    <div className="p-3.5 border-b border-border/80 bg-bg-surface/80 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-black uppercase tracking-wider text-amber-400">Contender A</span>
                             <select
@@ -267,7 +267,7 @@ export const ArenaView = () => {
 
                 {/* Side B */}
                 <div className="flex flex-col h-full overflow-hidden bg-bg-base/50">
-                    <div className="p-3.5 border-b border-border/80 bg-[#161b22]/70 flex items-center justify-between">
+                    <div className="p-3.5 border-b border-border/80 bg-bg-surface/80 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-black uppercase tracking-wider text-blue-400">Contender B</span>
                             <select
@@ -355,7 +355,7 @@ export const ArenaView = () => {
             </div>
 
             {/* Arena Input Bar */}
-            <div className="p-4 border-t border-border bg-[#161b22] shrink-0">
+            <div className="p-4 border-t border-border bg-bg-surface shrink-0">
                 <div className="max-w-4xl mx-auto flex items-center gap-3">
                     <input
                         type="text"

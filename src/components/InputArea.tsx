@@ -112,11 +112,11 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                     rows={1}
                 />
 
-                <div className="flex items-center justify-between p-2 pl-3 bg-white/5 border-t border-white/5">
+                <div className="flex items-center justify-between p-2 pl-3 bg-bg-surface/50 border-t border-border/40">
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="p-2 text-text-muted hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
+                            className="p-2 text-text-muted hover:text-text-main hover:bg-bg-surface-hover rounded-full transition-all duration-200"
                             title="Attach files (PDF, Markdown, Code, TXT) for Local In-Browser RAG"
                         >
                             <Paperclip size={18} />

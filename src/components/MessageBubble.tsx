@@ -53,7 +53,11 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
     const hasMultipleVariants = variants.length > 1;
 
     return (
-        <div className={`flex gap-4 p-5 rounded-2xl ${isUser ? 'bg-white/5 ml-auto max-w-[85%]' : 'max-w-[85%]'} group transition-all duration-200 hover:bg-white/5`}>
+        <div className={`flex gap-4 p-4 sm:p-5 rounded-2xl transition-all duration-200 ${
+            isUser
+                ? 'bg-bg-surface border border-border shadow-xs ml-auto max-w-[85%]'
+                : 'max-w-[85%] hover:bg-bg-surface/40'
+        } group`}>
             {!isUser && (
                 <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${
                     isLocal ? 'bg-gradient-to-br from-emerald-500 to-teal-700' : 'bg-gradient-to-br from-indigo-500 to-purple-600'
@@ -64,17 +68,17 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
 
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-bold text-sm text-white/90">
+                    <span className="font-bold text-sm text-text-main">
                         {isUser ? 'You' : isLocal ? 'Local Core' : 'PrivAI'}
                     </span>
 
                     {/* Branching tree version switcher (< 1 / 2 >) */}
                     {hasMultipleVariants && (
-                        <div className="flex items-center gap-1 bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-text-muted">
+                        <div className="flex items-center gap-1 bg-bg-surface border border-border px-1.5 py-0.5 rounded text-[11px] font-mono text-text-muted">
                             <button
                                 onClick={() => onSwitchVariant && onSwitchVariant(message.id, currentVariantIndex - 1)}
                                 disabled={currentVariantIndex <= 0}
-                                className="hover:text-white disabled:opacity-30 disabled:hover:text-text-muted"
+                                className="hover:text-text-main disabled:opacity-30 disabled:hover:text-text-muted transition-colors"
                                 title="Previous branch"
                             >
                                 <ChevronLeft size={12} />
@@ -83,7 +87,7 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                             <button
                                 onClick={() => onSwitchVariant && onSwitchVariant(message.id, currentVariantIndex + 1)}
                                 disabled={currentVariantIndex >= variants.length - 1}
-                                className="hover:text-white disabled:opacity-30 disabled:hover:text-text-muted"
+                                className="hover:text-text-main disabled:opacity-30 disabled:hover:text-text-muted transition-colors"
                                 title="Next branch"
                             >
                                 <ChevronRight size={12} />
@@ -96,7 +100,7 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                     </span>
                     {!isUser && message.model && (
                         <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-medium tracking-wide uppercase ${
-                            isLocal ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/10 text-text-muted'
+                            isLocal ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-bg-surface border border-border text-text-muted'
                         }`}>
                             {message.model}
                         </span>
@@ -189,7 +193,7 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                 {/* Telemetry Pill with Live Cost & Speed */}
                 {!isUser && !isEditing && (telemetry || message.model) && (
                     <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-text-muted">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 font-mono flex-wrap">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bg-surface border border-border font-mono flex-wrap shadow-xs">
                             {isLocal ? (
                                 <>
                                     <ShieldCheck size={12} className="text-emerald-400" />
@@ -231,7 +235,7 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                             {!isLocal && telemetry?.cost !== undefined && (
                                 <>
                                     <span>•</span>
-                                    <span className="text-amber-300 font-bold">
+                                    <span className="text-amber-400 font-bold">
                                         ${telemetry.cost.toFixed(4)}
                                     </span>
                                     <span className="text-[10px] text-text-faint">
@@ -249,7 +253,7 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                         {isUser && onEdit && (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="text-text-muted hover:text-white p-1 rounded-md hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px]"
+                                className="text-text-muted hover:text-text-main p-1 rounded-md hover:bg-bg-surface-hover transition-colors flex items-center gap-1 text-[11px]"
                                 title="Edit prompt and branch"
                             >
                                 <Pencil size={12} />
@@ -258,7 +262,7 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                         )}
                         <button
                             onClick={handleCopy}
-                            className="text-text-muted hover:text-white p-1 rounded-md hover:bg-white/10 transition-colors"
+                            className="text-text-muted hover:text-text-main p-1 rounded-md hover:bg-bg-surface-hover transition-colors"
                             title="Copy message"
                         >
                             {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
@@ -268,8 +272,8 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
             </div>
 
             {isUser && (
-                <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm bg-white/10`}>
-                    <User size={16} className="text-white/80" />
+                <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center shadow-xs bg-primary/10 border border-primary/20 text-primary">
+                    <User size={16} />
                 </div>
             )}
         </div>

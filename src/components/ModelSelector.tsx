@@ -43,7 +43,7 @@ export const ModelSelector = () => {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 text-left group"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-bg-surface-hover border border-transparent hover:border-border transition-all duration-200 text-left group"
             >
                 <div className="flex flex-col">
                     <span className={`text-[10px] font-bold uppercase tracking-wider leading-none mb-0.5 ${
@@ -57,7 +57,7 @@ export const ModelSelector = () => {
                         ) : (
                             <Sparkles size={13} className="text-accent-yellow" />
                         )}
-                        <span className="font-semibold text-sm text-white/90 group-hover:text-white transition-colors">
+                        <span className="font-semibold text-sm text-text-main transition-colors">
                             {currentModel?.name || state.defaultModelConfig.modelId}
                         </span>
                     </div>
@@ -188,7 +188,7 @@ const ModelOption = ({ model, isSelected, onSelect }: ModelOptionProps) => {
                 w-full px-3 py-2.5 flex items-center justify-between rounded-xl transition-all duration-200 group text-left
                 ${isSelected
                     ? 'bg-primary text-white shadow-md'
-                    : 'text-text-main hover:bg-white/5'}
+                    : 'text-text-main hover:bg-bg-surface-hover'}
             `}
         >
             <div className="flex flex-col gap-0.5 min-w-0 pr-2">

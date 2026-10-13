@@ -95,7 +95,7 @@ export const ArtifactCanvas = () => {
             `}
         >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#161b22]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-surface">
                 <div className="flex items-center gap-2 min-w-0">
                     <span className="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
                         ARTIFACT

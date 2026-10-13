@@ -220,7 +220,7 @@ export const CommandPalette = () => {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black-60 backdrop-blur-md animate-fade-in"
+            className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/75 backdrop-blur-md animate-fade-in"
             onClick={() => dispatch({ type: 'TOGGLE_COMMAND_PALETTE', open: false })}
         >
             <div
@@ -228,7 +228,7 @@ export const CommandPalette = () => {
                 onClick={e => e.stopPropagation()}
             >
                 {/* Search Bar */}
-                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-[#161b22]">
+                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-bg-surface">
                     <Search size={18} className="text-primary shrink-0" />
                     <input
                         ref={inputRef}
@@ -242,7 +242,7 @@ export const CommandPalette = () => {
                         onKeyDown={handleKeyDown}
                         className="w-full bg-transparent text-sm text-text-main outline-none placeholder:text-text-faint"
                     />
-                    <kbd className="hidden sm:inline-block text-[10px] bg-white/10 text-text-muted px-2 py-0.5 rounded font-mono">
+                    <kbd className="hidden sm:inline-block text-[10px] bg-bg-base border border-border/60 text-text-muted px-2 py-0.5 rounded font-mono">
                         ESC
                     </kbd>
                 </div>
@@ -262,11 +262,11 @@ export const CommandPalette = () => {
                                     onClick={item.action}
                                     onMouseEnter={() => setSelectedIndex(idx)}
                                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors ${
-                                        isSelected ? 'bg-primary text-white shadow-sm' : 'text-text-main hover:bg-white/5'
+                                        isSelected ? 'bg-primary text-white shadow-sm' : 'text-text-main hover:bg-bg-surface-hover'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-white/20' : 'bg-white/5'}`}>
+                                        <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-white/20' : 'bg-bg-base border border-border/50'}`}>
                                             {item.icon}
                                         </div>
                                         <div className="min-w-0">
@@ -282,7 +282,7 @@ export const CommandPalette = () => {
                                     </div>
 
                                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shrink-0 ${
-                                        isSelected ? 'bg-white/20 text-white' : 'bg-white/5 text-text-faint'
+                                        isSelected ? 'bg-white/20 text-white' : 'bg-bg-base border border-border/50 text-text-faint'
                                     }`}>
                                         {item.category}
                                     </span>
@@ -293,10 +293,10 @@ export const CommandPalette = () => {
                 </div>
 
                 {/* Footer instructions */}
-                <div className="px-4 py-2 border-t border-border bg-[#161b22] flex items-center justify-between text-[11px] text-text-faint">
+                <div className="px-4 py-2 border-t border-border bg-bg-surface flex items-center justify-between text-[11px] text-text-faint">
                     <div className="flex items-center gap-3">
-                        <span>Navigate: <kbd className="font-mono bg-white/10 px-1 rounded">↑</kbd> <kbd className="font-mono bg-white/10 px-1 rounded">↓</kbd></span>
-                        <span>Select: <kbd className="font-mono bg-white/10 px-1 rounded">↵</kbd></span>
+                        <span>Navigate: <kbd className="font-mono bg-bg-base border border-border/60 px-1 rounded">↑</kbd> <kbd className="font-mono bg-bg-base border border-border/60 px-1 rounded">↓</kbd></span>
+                        <span>Select: <kbd className="font-mono bg-bg-base border border-border/60 px-1 rounded">↵</kbd></span>
                     </div>
                     <span>PrivAI Command Engine</span>
                 </div>

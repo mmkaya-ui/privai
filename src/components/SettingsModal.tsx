@@ -214,26 +214,26 @@ export const SettingsModal = () => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black-60 p-4 backdrop-blur-sm animate-fade-in">
-            <div className="bg-bg-surface rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-border">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fade-in">
+            <div className="bg-bg-surface rounded-2xl w-full max-w-xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden border border-border">
                 {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-border bg-[#161b22]">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold text-text-main">PrivAI Settings</h2>
-                        <span className="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-bold uppercase">
+                <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border bg-bg-surface">
+                    <div className="flex items-center gap-2.5">
+                        <h2 className="text-base sm:text-lg font-bold text-text-main">PrivAI Settings</h2>
+                        <span className="text-[10px] bg-primary/15 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                             Zero-Telemetry
                         </span>
                     </div>
                     <button
                         onClick={() => dispatch({ type: 'TOGGLE_SETTINGS', open: false })}
-                        className="p-1.5 hover:bg-white/10 rounded-xl transition-colors text-text-muted hover:text-text-main"
+                        className="p-1.5 hover:bg-bg-highlight/50 rounded-xl transition-colors text-text-muted hover:text-text-main"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
                 {/* Navigation Tabs */}
-                <div className="flex border-b border-border bg-[#161b22]/50 px-4 pt-2 gap-2 overflow-x-auto">
+                <div className="flex border-b border-border bg-bg-base/40 px-4 pt-2 gap-2 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('local')}
                         className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
@@ -576,12 +576,19 @@ export const SettingsModal = () => {
                 </div>
 
                 {/* Footer */}
-                <footer className="p-4 border-t border-border bg-[#161b22] flex justify-end">
+                <footer className="p-4 border-t border-border bg-bg-surface flex items-center justify-end gap-2.5">
+                    <button
+                        type="button"
+                        onClick={() => dispatch({ type: 'TOGGLE_SETTINGS', open: false })}
+                        className="px-4 py-2.5 rounded-xl text-xs font-semibold text-text-muted hover:text-text-main hover:bg-bg-highlight/50 transition-colors border border-border"
+                    >
+                        Cancel
+                    </button>
                     <button
                         onClick={handleSave}
-                        className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-glow transition-all active:scale-[0.98]"
+                        className="flex items-center gap-2 bg-gradient-primary text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-glow transition-all active:scale-[0.98]"
                     >
-                        <Save size={18} />
+                        <Save size={14} />
                         <span>Save Settings</span>
                     </button>
                 </footer>

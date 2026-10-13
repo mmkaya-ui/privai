@@ -303,22 +303,24 @@ export const ChatArea = () => {
                     </button>
 
                     {/* 3 Interactive Mode Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-left">
                         {/* Card 1: Local Ollama */}
                         <div
                             onClick={() => dispatch({ type: 'TOGGLE_SETTINGS', open: true })}
-                            className="group p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-border hover:border-emerald-500/40 cursor-pointer transition-all duration-200"
+                            className="group p-4 rounded-2xl bg-bg-surface hover:bg-bg-surface-hover border border-border hover:border-emerald-500/50 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2.5">
-                                <Cpu size={16} />
+                            <div>
+                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-3 border border-emerald-500/20">
+                                    <Cpu size={16} />
+                                </div>
+                                <h4 className="text-xs font-bold text-text-main group-hover:text-emerald-300 transition-colors">
+                                    Local Machine AI
+                                </h4>
+                                <p className="text-[11px] text-text-muted mt-1 leading-snug">
+                                    Connect to Ollama or LM Studio on localhost. Zero network packets sent.
+                                </p>
                             </div>
-                            <h4 className="text-xs font-bold text-text-main group-hover:text-emerald-300 transition-colors">
-                                Local Machine AI
-                            </h4>
-                            <p className="text-[11px] text-text-muted mt-1 leading-snug">
-                                Connect to Ollama or LM Studio on localhost. Zero network packets sent.
-                            </p>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-2.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-3 pt-2 border-t border-border/40">
                                 <BookOpen size={10} /> Setup Guide →
                             </span>
                         </div>
@@ -340,18 +342,20 @@ export const ChatArea = () => {
                                 };
                                 dispatch({ type: 'CREATE_SESSION', session: newSession });
                             }}
-                            className="group p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-border hover:border-blue-500/40 cursor-pointer transition-all duration-200"
+                            className="group p-4 rounded-2xl bg-bg-surface hover:bg-bg-surface-hover border border-border hover:border-blue-500/50 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 mb-2.5">
-                                <Zap size={16} />
+                            <div>
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 mb-3 border border-blue-500/20">
+                                    <Zap size={16} />
+                                </div>
+                                <h4 className="text-xs font-bold text-text-main group-hover:text-blue-300 transition-colors">
+                                    In-Browser WebGPU
+                                </h4>
+                                <p className="text-[11px] text-text-muted mt-1 leading-snug">
+                                    Run Llama 3.2 directly in this browser tab. Zero installs needed.
+                                </p>
                             </div>
-                            <h4 className="text-xs font-bold text-text-main group-hover:text-blue-300 transition-colors">
-                                In-Browser WebGPU
-                            </h4>
-                            <p className="text-[11px] text-text-muted mt-1 leading-snug">
-                                Run Llama 3.2 directly in this browser tab. Zero installs needed.
-                            </p>
-                            <span className="text-[10px] font-bold text-blue-400 mt-2.5 block">
+                            <span className="text-[10px] font-bold text-blue-400 mt-3 pt-2 border-t border-border/40 block">
                                 Launch in Tab →
                             </span>
                         </div>
@@ -359,18 +363,20 @@ export const ChatArea = () => {
                         {/* Card 3: Cloud BYOK */}
                         <div
                             onClick={() => dispatch({ type: 'TOGGLE_SETTINGS', open: true })}
-                            className="group p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-border hover:border-purple-500/40 cursor-pointer transition-all duration-200"
+                            className="group p-4 rounded-2xl bg-bg-surface hover:bg-bg-surface-hover border border-border hover:border-purple-500/50 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 mb-2.5">
-                                <Key size={16} />
+                            <div>
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 mb-3 border border-purple-500/20">
+                                    <Key size={16} />
+                                </div>
+                                <h4 className="text-xs font-bold text-text-main group-hover:text-purple-300 transition-colors">
+                                    Wholesale BYOK
+                                </h4>
+                                <p className="text-[11px] text-text-muted mt-1 leading-snug">
+                                    Claude 3.5, DeepSeek R1, GPT-4o at raw token cost (~$0.0004/msg).
+                                </p>
                             </div>
-                            <h4 className="text-xs font-bold text-text-main group-hover:text-purple-300 transition-colors">
-                                Wholesale BYOK
-                            </h4>
-                            <p className="text-[11px] text-text-muted mt-1 leading-snug">
-                                Claude 3.5, DeepSeek R1, GPT-4o at raw token cost (~$0.0004/msg).
-                            </p>
-                            <span className="text-[10px] font-bold text-purple-400 mt-2.5 block">
+                            <span className="text-[10px] font-bold text-purple-400 mt-3 pt-2 border-t border-border/40 block">
                                 Enter Keys →
                             </span>
                         </div>

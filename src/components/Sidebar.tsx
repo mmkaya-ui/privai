@@ -33,47 +33,47 @@ export const Sidebar = () => {
     if (!state.isSidebarOpen) return null;
 
     return (
-        <aside className="fixed inset-0 w-full sm:static sm:w-64 h-full glass flex flex-col transition-all duration-300 ease-in-out shrink-0 z-20 border-r-0">
+        <aside className="fixed inset-0 w-full sm:static sm:w-64 h-full bg-bg-surface flex flex-col shrink-0 z-20 border-r border-border">
             {/* Header */}
-            <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <div className="p-4 flex items-center justify-between border-b border-border/40">
+                <div className="flex items-center gap-2.5">
                     <Logo size={28} />
-                    <h1 className="text-xl font-bold text-white tracking-wide">
+                    <h1 className="text-lg font-bold text-text-main tracking-tight">
                         PrivAI
                     </h1>
                 </div>
                 <button
                     onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-                    className="p-1 hover:bg-white/10 rounded text-text-muted block"
+                    className="p-1 hover:bg-bg-highlight/50 rounded-lg text-text-muted hover:text-text-main transition-colors block sm:hidden"
                 >
-                    <X size={20} />
+                    <X size={18} />
                 </button>
             </div>
 
             {/* New Chat & Search */}
-            <div className="px-3 pb-2 space-y-1.5">
+            <div className="p-3 space-y-2">
                 <button
                     onClick={handleNewChat}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-glow active:scale-95 transform transition-all duration-200 border border-white/10"
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white py-2.5 px-4 rounded-xl font-bold shadow-md hover:shadow-glow active:scale-[0.98] transition-all duration-150 text-sm"
                 >
-                    <PlusCircle size={18} />
+                    <PlusCircle size={16} />
                     <span>New Chat</span>
                 </button>
                 <button
                     onClick={() => dispatch({ type: 'TOGGLE_COMMAND_PALETTE', open: true })}
-                    className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 text-text-muted hover:text-text-main px-3 py-2 rounded-xl text-xs font-medium border border-white/5 transition-colors"
+                    className="w-full flex items-center justify-between bg-bg-base hover:bg-bg-highlight/40 text-text-muted hover:text-text-main px-3 py-2 rounded-xl text-xs font-medium border border-border transition-colors"
                 >
                     <span>Search or command...</span>
-                    <kbd className="font-mono text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-text-faint">⌘K</kbd>
+                    <kbd className="font-mono text-[10px] bg-bg-surface px-1.5 py-0.5 rounded border border-border text-text-faint">⌘K</kbd>
                 </button>
             </div>
 
             {/* Session List */}
-            <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1 custom-scrollbar">
                 {state.sessions.length === 0 && (
-                    <div className="text-center text-text-muted text-sm mt-10 px-4">
-                        <p>No chats yet.</p>
-                        <p className="text-xs text-text-faint mt-2">Your history is stored privately on this device.</p>
+                    <div className="text-center text-text-muted text-xs mt-12 px-4 space-y-1">
+                        <p className="font-medium">No chats yet.</p>
+                        <p className="text-text-faint text-[11px]">Conversations are encrypted & persisted locally.</p>
                     </div>
                 )}
                 {state.sessions.map(session => (
@@ -81,39 +81,39 @@ export const Sidebar = () => {
                         key={session.id}
                         onClick={() => dispatch({ type: 'SELECT_SESSION', sessionId: session.id })}
                         className={`
-                            group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all border border-transparent
+                            group flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all border
                             ${state.currentSessionId === session.id
-                                ? 'bg-white/10 text-white shadow-sm border-white/10 backdrop-blur-sm'
-                                : 'text-text-muted hover:bg-white/5 hover:text-white'}
+                                ? 'bg-primary/10 text-primary border-primary/25 shadow-sm font-semibold'
+                                : 'text-text-muted hover:bg-bg-surface-hover hover:text-text-main border-transparent'}
                         `}
                     >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <MessageSquare size={18} className="shrink-0 opacity-70" />
-                            <span className="truncate text-sm font-medium">{session.title}</span>
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                            <MessageSquare size={16} className={`shrink-0 ${state.currentSessionId === session.id ? 'text-primary' : 'opacity-60'}`} />
+                            <span className="truncate text-xs">{session.title}</span>
                         </div>
                         <button
                             onClick={(e) => handleDelete(e, session.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity"
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity rounded"
                             title="Delete Chat"
                         >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                         </button>
                     </div>
                 ))}
             </div>
 
-            {/* Footer / Motto */}
-            <div className="p-4 mt-auto">
+            {/* Footer / Settings */}
+            <div className="p-3 border-t border-border/40 mt-auto">
                 <button
                     onClick={() => dispatch({ type: 'TOGGLE_SETTINGS' })}
-                    className="flex flex-col items-start gap-1 w-full p-4 text-text-main bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200 mb-6 border border-white/5 backdrop-blur-md"
+                    className="flex flex-col items-start gap-1 w-full p-3 text-text-main bg-bg-base/60 hover:bg-bg-surface-hover rounded-xl transition-all duration-150 border border-border/60"
                 >
-                    <div className="flex items-center gap-2 text-text-muted mb-1">
-                        <Settings size={16} />
-                        <span className="text-xs font-semibold uppercase tracking-wider">Settings</span>
+                    <div className="flex items-center gap-2 text-text-muted">
+                        <Settings size={14} />
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Settings</span>
                     </div>
-                    <span className="font-bold text-sm">PRIVATE BY DESIGN</span>
-                    <span className="text-[10px] text-text-faint">Intelligent by Nature</span>
+                    <span className="font-bold text-xs text-text-main">Zero-Telemetry AI</span>
+                    <span className="text-[10px] text-text-faint">Direct BYOK & Local LLMs</span>
                 </button>
             </div>
         </aside>
