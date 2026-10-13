@@ -53,6 +53,7 @@ flowchart TD
 - **Production-Grade Code Blocks:** Prism syntax highlighting across 10+ languages with 1-click copy, download file, and "Open in Canvas" preview buttons.
 - **Client-Side Cryptography:** Master-passphrase AES-256-GCM encryption at rest with PBKDF2 (100,000 rounds) for zero-knowledge `.privai` export and restore.
 - **PWA & Offline Capability:** Next.js 16 App Router bundled with Serwist service worker for offline loading and local inference.
+- **In-Browser WebGPU LLMs:** Direct client-side inference powered by `@mlc-ai/web-llm` running Llama-3.2-1B and Gemma-2-2B locally on user GPU hardware with zero server dependency.
 
 ---
 
@@ -60,13 +61,15 @@ flowchart TD
 
 - [x] **CORS Browser Direct Access:** Anthropic direct browser header + optional zero-log Edge proxy
 - [x] **Native Local LLMs:** Ollama and LM Studio auto-discovery and offline chat
+- [x] **In-Browser WebGPU LLMs:** Zero-install in-tab Llama-3.2-1B and Gemma-2B via WebGPU
 - [x] **In-Browser Local Document RAG:** Zero-server PDF/Markdown/Code chunking and vector retrieval
-- [x] **Multi-Model Battle Arena:** Concurrent side-by-side model benchmarking
-- [x] **Command Palette (`Cmd+K`):** Raycast-style instant model switcher and search
+- [x] **Multi-Model Battle Arena:** Concurrent side-by-side model benchmarking with TTFT and tok/s
+- [x] **Conversation Branching:** In-place prompt editing with `< 1 / 2 >` tree variation navigation
+- [x] **Command Palette (`Cmd+K`):** Raycast-style instant model switcher and history search
 - [x] **Split-Screen Artifacts Canvas:** Live sandboxed HTML/JS/SVG preview runner
 - [x] **Client-Side Cryptography:** AES-256-GCM encrypted `.privai` backups
 - [x] **Production Syntax Highlighting:** Tokyo Night / GitHub Dark themes with Prism
-- [x] **Live Token & Cost Telemetry:** Real-time tokens, tok/s, duration, and BYOK cost pill
+- [x] **Live Token & Cost Telemetry:** Real-time tokens, tok/s, duration, and BYOK savings pill
 
 ---
 
@@ -75,6 +78,7 @@ flowchart TD
 - **Framework:** Next.js 16 (App Router), React 19
 - **Language:** TypeScript
 - **State & Storage:** IndexedDB (`idb`)
+- **In-Browser WebGPU:** `@mlc-ai/web-llm`
 - **Cryptography:** Web Crypto API (`SubtleCrypto` AES-GCM + PBKDF2)
 - **Syntax Highlighting:** Prism.js
 - **Icons & Motion:** Lucide Icons, Framer Motion
@@ -92,7 +96,19 @@ cd privai
 npm install
 ```
 
-### 2. Development
+### 2. Validation & Test Suites
+
+Run the automated offline unit tests and mock prompt streaming simulations:
+
+```bash
+# Run all tests (AES-256-GCM crypto, Local RAG, Provider streams & E2E simulation)
+npm test
+
+# Run the end-to-end simulated prompt stream test only
+npm run test:prompt
+```
+
+### 3. Development
 
 ```bash
 npm run dev
@@ -100,7 +116,7 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000). Use <kbd>Ctrl+K</kbd> or <kbd>⌘K</kbd> to open the Command Palette, switch models, or open **Settings** to configure Ollama or your BYOK keys.
 
-### 3. Production Build
+### 4. Production Build
 
 ```bash
 npm run build
