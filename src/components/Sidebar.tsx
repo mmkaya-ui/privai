@@ -50,14 +50,21 @@ export const Sidebar = () => {
                 </button>
             </div>
 
-            {/* New Chat */}
-            <div className="px-3 pb-2">
+            {/* New Chat & Search */}
+            <div className="px-3 pb-2 space-y-1.5">
                 <button
                     onClick={handleNewChat}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white p-3.5 rounded-xl font-semibold shadow-lg hover:shadow-glow active:scale-95 transform transition-all duration-200 border border-white/10"
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-glow active:scale-95 transform transition-all duration-200 border border-white/10"
                 >
-                    <PlusCircle size={20} />
+                    <PlusCircle size={18} />
                     <span>New Chat</span>
+                </button>
+                <button
+                    onClick={() => dispatch({ type: 'TOGGLE_COMMAND_PALETTE', open: true })}
+                    className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 text-text-muted hover:text-text-main px-3 py-2 rounded-xl text-xs font-medium border border-white/5 transition-colors"
+                >
+                    <span>Search or command...</span>
+                    <kbd className="font-mono text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-text-faint">⌘K</kbd>
                 </button>
             </div>
 

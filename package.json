@@ -6,17 +6,21 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node scripts/test-privai-engine.mjs"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.86",
     "@serwist/next": "^9.5.4",
     "@serwist/precaching": "^9.5.4",
     "@serwist/sw": "^9.5.4",
+    "@types/prismjs": "^1.26.6",
     "clsx": "^2.1.1",
     "framer-motion": "^12.33.0",
     "idb": "^8.0.3",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "prismjs": "^1.30.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",

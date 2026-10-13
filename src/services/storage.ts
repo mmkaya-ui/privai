@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { ChatSession, Message } from '@/types/llm';
+import { ChatSession } from '@/types/llm';
 
 interface PrivAIDB extends DBSchema {
     sessions: {
@@ -9,7 +9,7 @@ interface PrivAIDB extends DBSchema {
     };
     settings: {
         key: string;
-        value: any;
+        value: unknown;
     };
 }
 
@@ -58,21 +58,21 @@ class StorageService {
         await db.delete('sessions', id);
     }
 
-    async saveSetting(key: string, value: any): Promise<void> {
+    async saveSetting(key: string, value: unknown): Promise<void> {
         const db = await this.dbPromise;
         await db.put('settings', value, key);
     }
 
-    async getSetting(key: string): Promise<any> {
+    async getSetting<T = unknown>(key: string): Promise<T | undefined> {
         const db = await this.dbPromise;
-        return db.get('settings', key);
+        return (await db.get('settings', key)) as T | undefined;
     }
 
-    async getAllSettings(): Promise<Record<string, any>> {
+    async getAllSettings(): Promise<Record<string, unknown>> {
         const db = await this.dbPromise;
         const keys = await db.getAllKeys('settings');
         const values = await db.getAll('settings');
-        const result: Record<string, any> = {};
+        const result: Record<string, unknown> = {};
         keys.forEach((k, i) => {
             if (typeof k === 'string') result[k] = values[i];
         });

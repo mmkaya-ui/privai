@@ -57,7 +57,7 @@ export const GeminiAdapter: LLMProviderAdapter = {
                             const json = JSON.parse(data);
                             const token = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
                             yield token;
-                        } catch (e) {
+                        } catch {
                             // ignore parse error for partial lines
                         }
                     }

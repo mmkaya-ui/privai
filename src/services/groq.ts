@@ -53,7 +53,7 @@ export const GroqAdapter: LLMProviderAdapter = {
                             const json = JSON.parse(data);
                             const token = json.choices[0]?.delta?.content || "";
                             yield token;
-                        } catch (e) {
+                        } catch {
                             // ignore parse error for partial lines
                         }
                     }

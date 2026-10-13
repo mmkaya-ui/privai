@@ -2,134 +2,528 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
-import { X, Save, Eye, EyeOff } from 'lucide-react';
+import {
+    X,
+    Save,
+    Eye,
+    EyeOff,
+    Cpu,
+    RefreshCw,
+    CheckCircle2,
+    AlertCircle,
+    Globe,
+    Shield,
+    Lock,
+    Download,
+    Upload
+} from 'lucide-react';
+import { checkOllamaConnection } from '@/services/ollama';
+import { encryptData, decryptData, EncryptedPrivAIPayload } from '@/services/crypto';
+import { storage } from '@/services/storage';
 
 export const SettingsModal = () => {
     const { state, dispatch } = useApp();
     const [keys, setKeys] = useState(state.apiKeys);
+    const [baseUrls, setBaseUrls] = useState(state.customBaseUrls);
     const [showKey, setShowKey] = useState<Record<string, boolean>>({});
+    const [activeTab, setActiveTab] = useState<'local' | 'cloud' | 'security' | 'appearance'>('local');
+
+    // Local LLM connection status
+    const [isTestingOllama, setIsTestingOllama] = useState(false);
+    const [ollamaStatus, setOllamaStatus] = useState<{ checked: boolean; ok: boolean; message: string }>({
+        checked: false,
+        ok: false,
+        message: ''
+    });
+
+    // Zero-Knowledge Encrypted Backup State
+    const [exportPassphrase, setExportPassphrase] = useState('');
+    const [importPassphrase, setImportPassphrase] = useState('');
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [backupStatus, setBackupStatus] = useState<{ message: string; ok: boolean } | null>(null);
+    const [isProcessingBackup, setIsProcessingBackup] = useState(false);
 
     if (!state.isSettingsOpen) return null;
 
-    const providers = [
-        { id: 'groq', name: 'Groq (Free - get key at console.groq.com)' },
-        { id: 'openai', name: 'OpenAI (ChatGPT)' },
-        { id: 'anthropic', name: 'Anthropic (Claude)' },
-        { id: 'gemini', name: 'Google Gemini' },
-        { id: 'deepseek', name: 'DeepSeek' },
+    const cloudProviders = [
+        { id: 'groq', name: 'Groq (Free)', desc: 'High-speed cloud LPUs. Get key at console.groq.com' },
+        { id: 'anthropic', name: 'Anthropic (Claude)', desc: 'Claude 3.5 Sonnet / Haiku. Direct browser access enabled' },
+        { id: 'openai', name: 'OpenAI (GPT-4o / o3-mini)', desc: 'OpenAI official API or compatible endpoints' },
+        { id: 'deepseek', name: 'DeepSeek (V3 / R1)', desc: 'DeepSeek cloud API key' },
+        { id: 'gemini', name: 'Google Gemini', desc: 'Gemini 1.5 Pro / Flash API key' },
     ];
 
     const handleSave = () => {
+        // Save API Keys
         Object.entries(keys).forEach(([provider, key]) => {
             dispatch({ type: 'SET_API_KEY', provider, key });
         });
-        dispatch({ type: 'TOGGLE_SETTINGS' });
+        // Save Custom Base URLs
+        Object.entries(baseUrls).forEach(([provider, url]) => {
+            dispatch({ type: 'SET_CUSTOM_BASE_URL', provider, url });
+        });
+        dispatch({ type: 'TOGGLE_SETTINGS', open: false });
     };
 
     const toggleShow = (id: string) => {
         setShowKey(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    const handleTestOllama = async () => {
+        setIsTestingOllama(true);
+        const url = baseUrls.ollama || 'http://localhost:11434';
+        const res = await checkOllamaConnection(url);
+        setIsTestingOllama(false);
+        if (res.ok) {
+            setOllamaStatus({
+                checked: true,
+                ok: true,
+                message: `Connected! Found ${res.models.length} model(s): ${res.models.slice(0, 3).join(', ')}${res.models.length > 3 ? '...' : ''}`
+            });
+        } else {
+            setOllamaStatus({
+                checked: true,
+                ok: false,
+                message: res.error || 'Connection failed'
+            });
+        }
+    };
+
+    // Export AES-256-GCM Encrypted Backup
+    const handleExportBackup = async () => {
+        if (!exportPassphrase || exportPassphrase.length < 4) {
+            setBackupStatus({ ok: false, message: 'Passphrase must be at least 4 characters long.' });
+            return;
+        }
+
+        try {
+            setIsProcessingBackup(true);
+            setBackupStatus(null);
+
+            const sessions = await storage.getSessions();
+            const exportPayload = {
+                sessions,
+                settings: {
+                    apiKeys: keys,
+                    customBaseUrls: baseUrls,
+                    theme: state.theme,
+                    textSize: state.textSize,
+                    defaultModelConfig: state.defaultModelConfig
+                },
+                exportedAt: Date.now()
+            };
+
+            const encrypted = await encryptData(exportPayload, exportPassphrase);
+
+            const blob = new Blob([JSON.stringify(encrypted, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const dateStr = new Date().toISOString().slice(0, 10);
+            a.download = `privai-encrypted-backup-${dateStr}.privai`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            setBackupStatus({
+                ok: true,
+                message: `Successfully encrypted and downloaded backup (${sessions.length} chats).`
+            });
+            setExportPassphrase('');
+        } catch (err: unknown) {
+            setBackupStatus({ ok: false, message: (err as Error).message || 'Export failed.' });
+        } finally {
+            setIsProcessingBackup(false);
+        }
+    };
+
+    // Restore AES-256-GCM Encrypted Backup
+    const handleImportBackup = async () => {
+        if (!importFile) {
+            setBackupStatus({ ok: false, message: 'Please select a .privai backup file first.' });
+            return;
+        }
+        if (!importPassphrase) {
+            setBackupStatus({ ok: false, message: 'Please enter the decryption passphrase.' });
+            return;
+        }
+
+        try {
+            setIsProcessingBackup(true);
+            setBackupStatus(null);
+
+            const rawText = await importFile.text();
+            const payload: EncryptedPrivAIPayload = JSON.parse(rawText);
+
+            interface PrivAIBackupContent {
+                version?: number;
+                sessions?: typeof state.sessions;
+                settings?: {
+                    apiKeys?: Record<string, string>;
+                    customBaseUrls?: Record<string, string>;
+                };
+            }
+
+            const decrypted = await decryptData<PrivAIBackupContent>(payload, importPassphrase);
+
+            if (!decrypted || !decrypted.sessions) {
+                throw new Error('Invalid backup structure.');
+            }
+
+            // Restore sessions to IndexedDB
+            for (const sess of decrypted.sessions) {
+                await storage.saveSession(sess);
+            }
+
+            // Restore settings if present
+            if (decrypted.settings) {
+                if (decrypted.settings.apiKeys) {
+                    setKeys(decrypted.settings.apiKeys);
+                    await storage.saveSetting('apiKeys', decrypted.settings.apiKeys);
+                }
+                if (decrypted.settings.customBaseUrls) {
+                    setBaseUrls(decrypted.settings.customBaseUrls);
+                    await storage.saveSetting('customBaseUrls', decrypted.settings.customBaseUrls);
+                }
+            }
+
+            // Update app state
+            dispatch({
+                type: 'LOAD_STATE',
+                state: {
+                    sessions: decrypted.sessions,
+                    apiKeys: decrypted.settings?.apiKeys || keys,
+                    customBaseUrls: decrypted.settings?.customBaseUrls || baseUrls
+                }
+            });
+
+            setBackupStatus({
+                ok: true,
+                message: `Successfully restored ${decrypted.sessions.length} conversations from encrypted backup!`
+            });
+            setImportFile(null);
+            setImportPassphrase('');
+        } catch (err: unknown) {
+            setBackupStatus({ ok: false, message: (err as Error).message || 'Decryption failed. Check passphrase.' });
+        } finally {
+            setIsProcessingBackup(false);
+        }
+    };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black-60 p-4">
-            <div className="bg-glass rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-90vh overflow-hidden border border-border animate-fade-in shadow-xl">
-                <div className="flex items-center justify-between p-5 border-b border-border bg-white/5">
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Settings</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black-60 p-4 backdrop-blur-sm animate-fade-in">
+            <div className="bg-bg-surface rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-border">
+                {/* Header */}
+                <div className="flex items-center justify-between p-5 border-b border-border bg-[#161b22]">
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-text-main">PrivAI Settings</h2>
+                        <span className="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-bold uppercase">
+                            Zero-Telemetry
+                        </span>
+                    </div>
                     <button
-                        onClick={() => dispatch({ type: 'TOGGLE_SETTINGS' })}
-                        className="p-2 hover:bg-white/10 rounded-xl transition-colors text-text-muted hover:text-text-main"
+                        onClick={() => dispatch({ type: 'TOGGLE_SETTINGS', open: false })}
+                        className="p-1.5 hover:bg-white/10 rounded-xl transition-colors text-text-muted hover:text-text-main"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-8">
-                    {/* Appearance */}
-                    <section className="space-y-4">
-                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary">Appearance</h3>
-
-                        {/* Theme */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold block text-text-main">Interface Theme</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {(['light', 'dark', 'oled', 'system'] as const).map((t) => (
-                                    <button
-                                        key={t}
-                                        onClick={() => dispatch({ type: 'SET_THEME', theme: t })}
-                                        className={`
-                                            px-2 py-2.5 rounded-xl text-xs font-bold border transition-all duration-200 capitalize
-                                            ${state.theme === t
-                                                ? 'bg-gradient-primary text-white border-transparent shadow-glow'
-                                                : 'bg-bg-surface border-border text-text-muted hover:bg-bg-highlight hover:text-text-main'}
-                                        `}
-                                    >
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Text Size */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold block flex justify-between">
-                                <span className="text-text-main">Typography Scale</span>
-                                <span className="text-primary text-[10px] font-black uppercase tracking-widest">{state.textSize}</span>
-                            </label>
-                            <div className="flex bg-bg-surface border border-border rounded-xl p-1.5 shadow-inner">
-                                {(['small', 'medium', 'large', 'xlarge'] as const).map((s) => (
-                                    <button
-                                        key={s}
-                                        onClick={() => dispatch({ type: 'SET_TEXT_SIZE', size: s })}
-                                        className={`
-                                            flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-200
-                                            ${state.textSize === s
-                                                ? 'bg-bg-highlight text-text-main shadow-md ring-1 ring-border'
-                                                : 'text-text-muted hover:text-text-main'}
-                                        `}
-                                    >
-                                        <div className="flex flex-col items-center gap-0.5">
-                                            <span className={`${s === 'small' ? 'text-[10px]' : s === 'medium' ? 'text-sm' : s === 'large' ? 'text-base' : 'text-lg'}`}>Aa</span>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="space-y-5">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary">Intelligence</h3>
-                        </div>
-                        {providers.map(p => (
-                            <div key={p.id} className="space-y-2">
-                                <label className="text-sm font-semibold block text-text-main">{p.name}</label>
-                                <div className="relative group">
-                                    <input
-                                        type={showKey[p.id] ? "text" : "password"}
-                                        className="w-full bg-bg-base border border-border rounded-xl p-3.5 text-sm text-text-main outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200"
-                                        placeholder={`Enter API Key for ${p.id}...`}
-                                        value={keys[p.id] || ''}
-                                        onChange={(e) => setKeys({ ...keys, [p.id]: e.target.value })}
-                                    />
-                                    <button
-                                        onClick={() => toggleShow(p.id)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-main p-1 rounded-lg transition-colors"
-                                    >
-                                        {showKey[p.id] ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </section>
+                {/* Navigation Tabs */}
+                <div className="flex border-b border-border bg-[#161b22]/50 px-4 pt-2 gap-2 overflow-x-auto">
+                    <button
+                        onClick={() => setActiveTab('local')}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+                            activeTab === 'local'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-text-muted hover:text-text-main'
+                        }`}
+                    >
+                        <Cpu size={14} />
+                        <span>Local LLMs & URLs</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('cloud')}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+                            activeTab === 'cloud'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-text-muted hover:text-text-main'
+                        }`}
+                    >
+                        <Globe size={14} />
+                        <span>Cloud API Keys</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('security')}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+                            activeTab === 'security'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-text-muted hover:text-text-main'
+                        }`}
+                    >
+                        <Lock size={14} />
+                        <span>Encrypted Backups</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('appearance')}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+                            activeTab === 'appearance'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-text-muted hover:text-text-main'
+                        }`}
+                    >
+                        <span>Appearance</span>
+                    </button>
                 </div>
 
-                <footer className="p-5 border-t border-border bg-white/5 flex justify-end gap-3">
+                {/* Content */}
+                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
+                    {/* Tab: Local LLMs */}
+                    {activeTab === 'local' && (
+                        <div className="space-y-5">
+                            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 leading-relaxed">
+                                <strong>Native Zero-Telemetry Mode:</strong> Run LLMs directly on your laptop using Ollama or LM Studio. Zero network packets will ever leave your computer.
+                            </div>
+
+                            {/* Ollama Host */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-semibold text-text-main">Ollama Endpoint URL</label>
+                                    <button
+                                        type="button"
+                                        onClick={handleTestOllama}
+                                        disabled={isTestingOllama}
+                                        className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
+                                    >
+                                        <RefreshCw size={11} className={isTestingOllama ? 'animate-spin' : ''} />
+                                        <span>Test Connection</span>
+                                    </button>
+                                </div>
+                                <input
+                                    type="text"
+                                    className="w-full bg-bg-base border border-border rounded-xl p-3 text-sm text-text-main outline-none focus:border-primary transition-all font-mono"
+                                    placeholder="http://localhost:11434"
+                                    value={baseUrls.ollama || ''}
+                                    onChange={(e) => setBaseUrls({ ...baseUrls, ollama: e.target.value })}
+                                />
+                                {ollamaStatus.checked && (
+                                    <div className={`flex items-center gap-1.5 text-xs font-medium ${
+                                        ollamaStatus.ok ? 'text-emerald-400' : 'text-red-400'
+                                    }`}>
+                                        {ollamaStatus.ok ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                                        <span>{ollamaStatus.message}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* LM Studio Host */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-text-main">LM Studio / LocalAI Base URL</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-bg-base border border-border rounded-xl p-3 text-sm text-text-main outline-none focus:border-primary transition-all font-mono"
+                                    placeholder="http://localhost:1234/v1"
+                                    value={baseUrls.lmstudio || ''}
+                                    onChange={(e) => setBaseUrls({ ...baseUrls, lmstudio: e.target.value })}
+                                />
+                                <span className="text-[11px] text-text-faint block">
+                                    Supports LM Studio, LocalAI, vLLM, or any OpenAI-compatible server.
+                                </span>
+                            </div>
+
+                            {/* Custom OpenAI Proxy / OpenRouter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-text-main">Custom OpenAI Base URL (Optional)</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-bg-base border border-border rounded-xl p-3 text-sm text-text-main outline-none focus:border-primary transition-all font-mono"
+                                    placeholder="https://openrouter.ai/api/v1 or custom proxy"
+                                    value={baseUrls.openai || ''}
+                                    onChange={(e) => setBaseUrls({ ...baseUrls, openai: e.target.value })}
+                                />
+                                <span className="text-[11px] text-text-faint block">
+                                    Override endpoint for OpenRouter, Cloudflare AI Gateway, or self-hosted proxy.
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab: Cloud API Keys */}
+                    {activeTab === 'cloud' && (
+                        <div className="space-y-4">
+                            <p className="text-xs text-text-muted">
+                                PrivAI communicates directly from your browser to each AI provider using client-side BYOK. Keys are encrypted in your local device storage.
+                            </p>
+                            {cloudProviders.map(p => (
+                                <div key={p.id} className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-semibold text-text-main">{p.name}</label>
+                                        <span className="text-[10px] text-text-faint">{p.desc}</span>
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            type={showKey[p.id] ? "text" : "password"}
+                                            className="w-full bg-bg-base border border-border rounded-xl p-3 text-sm text-text-main outline-none focus:border-primary transition-all font-mono"
+                                            placeholder={`Paste ${p.name} Key...`}
+                                            value={keys[p.id] || ''}
+                                            onChange={(e) => setKeys({ ...keys, [p.id]: e.target.value })}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleShow(p.id)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-main p-1 rounded-lg"
+                                        >
+                                            {showKey[p.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Tab: Security & Encrypted Backups */}
+                    {activeTab === 'security' && (
+                        <div className="space-y-6">
+                            <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 leading-relaxed">
+                                <div className="flex items-center gap-1.5 font-bold mb-1">
+                                    <Shield size={14} className="text-purple-400" />
+                                    <span>Client-Side AES-256-GCM Zero-Knowledge Encryption</span>
+                                </div>
+                                Export all conversations and configurations into a portable encrypted <code className="bg-purple-900/50 px-1 py-0.5 rounded">.privai</code> file. Zero servers involved.
+                            </div>
+
+                            {/* Status Alert */}
+                            {backupStatus && (
+                                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                                    backupStatus.ok
+                                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                        : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                                }`}>
+                                    {backupStatus.ok ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                    <span>{backupStatus.message}</span>
+                                </div>
+                            )}
+
+                            {/* Export Section */}
+                            <div className="space-y-3 p-4 rounded-xl bg-bg-base border border-border">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-1.5">
+                                    <Download size={14} className="text-primary" />
+                                    <span>Export Encrypted Backup (.privai)</span>
+                                </h4>
+                                <input
+                                    type="password"
+                                    placeholder="Enter Master Encryption Passphrase..."
+                                    value={exportPassphrase}
+                                    onChange={(e) => setExportPassphrase(e.target.value)}
+                                    className="w-full bg-bg-surface border border-border rounded-xl p-2.5 text-xs text-text-main outline-none focus:border-primary"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleExportBackup}
+                                    disabled={isProcessingBackup}
+                                    className="w-full flex items-center justify-center gap-1.5 bg-primary hover:bg-primary-hover text-white py-2 rounded-xl text-xs font-bold transition-all"
+                                >
+                                    <Download size={13} />
+                                    <span>{isProcessingBackup ? 'Encrypting...' : 'Export .privai File'}</span>
+                                </button>
+                            </div>
+
+                            {/* Restore Section */}
+                            <div className="space-y-3 p-4 rounded-xl bg-bg-base border border-border">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-1.5">
+                                    <Upload size={14} className="text-emerald-400" />
+                                    <span>Restore from Encrypted Backup</span>
+                                </h4>
+                                <input
+                                    type="file"
+                                    accept=".privai,.json"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setImportFile(e.target.files[0]);
+                                        }
+                                    }}
+                                    className="w-full text-xs text-text-muted file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-text-main hover:file:bg-white/20"
+                                />
+                                <input
+                                    type="password"
+                                    placeholder="Enter Passphrase to Decrypt..."
+                                    value={importPassphrase}
+                                    onChange={(e) => setImportPassphrase(e.target.value)}
+                                    className="w-full bg-bg-surface border border-border rounded-xl p-2.5 text-xs text-text-main outline-none focus:border-primary"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleImportBackup}
+                                    disabled={isProcessingBackup}
+                                    className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-bold transition-all"
+                                >
+                                    <Upload size={13} />
+                                    <span>{isProcessingBackup ? 'Decrypting...' : 'Decrypt & Restore Data'}</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab: Appearance */}
+                    {activeTab === 'appearance' && (
+                        <div className="space-y-6">
+                            {/* Theme */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-text-main">Interface Theme</label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {(['light', 'dark', 'oled', 'system'] as const).map((t) => (
+                                        <button
+                                            key={t}
+                                            type="button"
+                                            onClick={() => dispatch({ type: 'SET_THEME', theme: t })}
+                                            className={`
+                                                px-2 py-2.5 rounded-xl text-xs font-bold border transition-all capitalize
+                                                ${state.theme === t
+                                                    ? 'bg-primary text-white border-primary shadow-glow'
+                                                    : 'bg-bg-surface border-border text-text-muted hover:bg-bg-highlight hover:text-text-main'}
+                                            `}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Text Size */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-text-main flex justify-between">
+                                    <span>Typography Scale</span>
+                                    <span className="text-primary text-[10px] font-black uppercase tracking-widest">{state.textSize}</span>
+                                </label>
+                                <div className="flex bg-bg-base border border-border rounded-xl p-1.5">
+                                    {(['small', 'medium', 'large', 'xlarge'] as const).map((s) => (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            onClick={() => dispatch({ type: 'SET_TEXT_SIZE', size: s })}
+                                            className={`
+                                                flex-1 py-2 rounded-lg text-xs font-bold transition-all
+                                                ${state.textSize === s
+                                                    ? 'bg-bg-highlight text-text-main shadow-md'
+                                                    : 'text-text-muted hover:text-text-main'}
+                                            `}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <footer className="p-4 border-t border-border bg-[#161b22] flex justify-end">
                     <button
                         onClick={handleSave}
-                        className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-glow transition-all duration-200 active:scale-[0.98]"
+                        className="w-full flex items-center justify-center gap-2 bg-gradient-primary text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-glow transition-all active:scale-[0.98]"
                     >
-                        <Save size={20} />
-                        Synchronize Settings
+                        <Save size={18} />
+                        <span>Save Settings</span>
                     </button>
                 </footer>
             </div>

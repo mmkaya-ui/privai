@@ -16,13 +16,16 @@ export const AnthropicAdapter: LLMProviderAdapter = {
             }));
 
         const systemMessage = messages.find(m => m.role === 'system')?.content;
+        const endpoint = config.baseUrl?.trim() || "https://api.anthropic.com/v1/messages";
 
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch(endpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "x-api-key": apiKey,
-                "anthropic-version": "2023-06-01"
+                "anthropic-version": "2023-06-01",
+                // Required by Anthropic for direct browser-side API calls
+                "anthropic-dangerous-direct-browser-access": "true"
             },
             signal,
             body: JSON.stringify({
@@ -35,8 +38,8 @@ export const AnthropicAdapter: LLMProviderAdapter = {
         });
 
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error?.message || "Anthropic API Error");
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Anthropic API Error (${response.status})`);
         }
 
         if (!response.body) throw new Error("No response body");
@@ -63,7 +66,7 @@ export const AnthropicAdapter: LLMProviderAdapter = {
                                 const token = json.delta?.text || "";
                                 yield token;
                             }
-                        } catch (e) {
+                        } catch {
                             // ignore parse error for partial lines
                         }
                     }

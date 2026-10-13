@@ -7,7 +7,14 @@ export const OpenAIAdapter: LLMProviderAdapter = {
     async chat(messages: Message[], config: ModelConfig, apiKey: string, signal?: AbortSignal) {
         if (!apiKey) throw new Error("API Key required for OpenAI");
 
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        let endpoint = config.baseUrl?.trim() || "https://api.openai.com/v1/chat/completions";
+        if (endpoint.endsWith('/v1')) {
+            endpoint = `${endpoint}/chat/completions`;
+        }
+
+        const isReasoningModel = config.modelId.startsWith('o1') || config.modelId.startsWith('o3');
+
+        const response = await fetch(endpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -20,16 +27,16 @@ export const OpenAIAdapter: LLMProviderAdapter = {
                     role: m.role,
                     content: m.content
                 })),
-                ...((!config.modelId.startsWith('o1') && !config.modelId.startsWith('o3')) && {
-                    temperature: config.temperature
+                ...(!isReasoningModel && {
+                    temperature: config.temperature ?? 0.7
                 }),
                 stream: true
             })
         });
 
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error?.message || "OpenAI API Error");
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `OpenAI API Error (${response.status})`);
         }
 
         if (!response.body) throw new Error("No response body");
@@ -49,13 +56,13 @@ export const OpenAIAdapter: LLMProviderAdapter = {
 
                 for (const line of lines) {
                     if (line.startsWith("data: ")) {
-                        const data = line.slice(6);
+                        const data = line.slice(6).trim();
                         if (data === "[DONE]") return;
                         try {
                             const json = JSON.parse(data);
-                            const token = json.choices[0]?.delta?.content || "";
-                            yield token;
-                        } catch (e) {
+                            const token = json.choices?.[0]?.delta?.content || "";
+                            if (token) yield token;
+                        } catch {
                             // ignore parse error for partial lines
                         }
                     }

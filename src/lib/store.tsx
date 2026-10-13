@@ -1,18 +1,22 @@
 "use client";
 
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { ChatSession, Message, ModelConfig } from '@/types/llm';
-import { v4 as uuidv4 } from 'uuid';
+import { ChatSession, Message, ModelConfig, ArtifactData, MessageTelemetry } from '@/types/llm';
 
 // State Definition
-interface AppState {
+export interface AppState {
     sessions: ChatSession[];
     currentSessionId: string | null;
     apiKeys: Record<string, string>; // provider -> key
+    customBaseUrls: Record<string, string>; // provider -> baseUrl
     theme: 'dark' | 'light' | 'oled' | 'system';
     textSize: 'small' | 'medium' | 'large' | 'xlarge';
     isSidebarOpen: boolean;
     isSettingsOpen: boolean;
+    isCommandPaletteOpen: boolean;
+    activeArtifact: ArtifactData | null;
+    isArtifactOpen: boolean;
+    activeView: 'chat' | 'arena';
     defaultModelConfig: ModelConfig;
 }
 
@@ -21,27 +25,42 @@ const initialState: AppState = {
     sessions: [],
     currentSessionId: null,
     apiKeys: {},
-    theme: 'dark', // Default, will verify 'system' later
+    customBaseUrls: {
+        ollama: 'http://localhost:11434',
+        lmstudio: 'http://localhost:1234/v1'
+    },
+    theme: 'dark',
     textSize: 'medium',
     isSidebarOpen: true,
     isSettingsOpen: false,
+    isCommandPaletteOpen: false,
+    activeArtifact: null,
+    isArtifactOpen: false,
+    activeView: 'chat',
     defaultModelConfig: {
-        provider: 'openai',
-        modelId: 'gpt-4o',
+        provider: 'groq',
+        modelId: 'llama-3.3-70b-versatile',
         temperature: 0.7,
     },
 };
 
 // Actions
-type Action =
+export type Action =
     | { type: 'SET_API_KEY'; provider: string; key: string }
+    | { type: 'SET_CUSTOM_BASE_URL'; provider: string; url: string }
     | { type: 'CREATE_SESSION'; session: ChatSession }
     | { type: 'DELETE_SESSION'; sessionId: string }
     | { type: 'SELECT_SESSION'; sessionId: string }
+    | { type: 'CLEAR_SESSION_MESSAGES'; sessionId: string }
     | { type: 'ADD_MESSAGE'; sessionId: string; message: Message }
-    | { type: 'UPDATE_MESSAGE'; sessionId: string; messageId: string; content: string }
-    | { type: 'TOGGLE_SIDEBAR' }
-    | { type: 'TOGGLE_SETTINGS' }
+    | { type: 'UPDATE_MESSAGE'; sessionId: string; messageId: string; content: string; telemetry?: MessageTelemetry; sources?: { filename: string; relevance: number }[] }
+    | { type: 'SWITCH_MESSAGE_VARIANT'; sessionId: string; messageId: string; variantIndex: number }
+    | { type: 'TOGGLE_SIDEBAR'; open?: boolean }
+    | { type: 'TOGGLE_SETTINGS'; open?: boolean }
+    | { type: 'TOGGLE_COMMAND_PALETTE'; open?: boolean }
+    | { type: 'OPEN_ARTIFACT'; artifact: ArtifactData }
+    | { type: 'CLOSE_ARTIFACT' }
+    | { type: 'SET_VIEW'; view: AppState['activeView'] }
     | { type: 'SET_THEME'; theme: AppState['theme'] }
     | { type: 'SET_TEXT_SIZE'; size: AppState['textSize'] }
     | { type: 'SET_MODEL'; config: ModelConfig }
@@ -50,8 +69,15 @@ type Action =
 // Reducer
 function appReducer(state: AppState, action: Action): AppState {
     switch (action.type) {
+        case 'SET_VIEW':
+            return { ...state, activeView: action.view };
         case 'SET_API_KEY':
             return { ...state, apiKeys: { ...state.apiKeys, [action.provider]: action.key } };
+        case 'SET_CUSTOM_BASE_URL':
+            return {
+                ...state,
+                customBaseUrls: { ...state.customBaseUrls, [action.provider]: action.url }
+            };
         case 'CREATE_SESSION':
             return {
                 ...state,
@@ -60,6 +86,15 @@ function appReducer(state: AppState, action: Action): AppState {
             };
         case 'SELECT_SESSION':
             return { ...state, currentSessionId: action.sessionId };
+        case 'CLEAR_SESSION_MESSAGES':
+            return {
+                ...state,
+                sessions: state.sessions.map(s =>
+                    s.id === action.sessionId
+                        ? { ...s, messages: [], updatedAt: Date.now() }
+                        : s
+                )
+            };
         case 'DELETE_SESSION':
             return {
                 ...state,
@@ -83,16 +118,49 @@ function appReducer(state: AppState, action: Action): AppState {
                         ? {
                             ...s,
                             messages: s.messages.map(m =>
-                                m.id === action.messageId ? { ...m, content: action.content } : m
+                                m.id === action.messageId
+                                    ? {
+                                        ...m,
+                                        content: action.content,
+                                        ...(action.telemetry ? { telemetry: action.telemetry } : {}),
+                                        ...(action.sources ? { sources: action.sources } : {})
+                                    }
+                                    : m
+                            )
+                        }
+                        : s
+                )
+            };
+        case 'SWITCH_MESSAGE_VARIANT':
+            return {
+                ...state,
+                sessions: state.sessions.map(s =>
+                    s.id === action.sessionId
+                        ? {
+                            ...s,
+                            messages: s.messages.map(m =>
+                                m.id === action.messageId && m.variants && m.variants[action.variantIndex] !== undefined
+                                    ? {
+                                        ...m,
+                                        content: m.variants[action.variantIndex],
+                                        variantIndex: action.variantIndex
+                                    }
+                                    : m
                             )
                         }
                         : s
                 )
             };
         case 'TOGGLE_SIDEBAR':
-            return { ...state, isSidebarOpen: !state.isSidebarOpen };
+            return { ...state, isSidebarOpen: action.open ?? !state.isSidebarOpen };
         case 'TOGGLE_SETTINGS':
-            return { ...state, isSettingsOpen: !state.isSettingsOpen };
+            return { ...state, isSettingsOpen: action.open ?? !state.isSettingsOpen };
+        case 'TOGGLE_COMMAND_PALETTE':
+            return { ...state, isCommandPaletteOpen: action.open ?? !state.isCommandPaletteOpen };
+        case 'OPEN_ARTIFACT':
+            return { ...state, activeArtifact: action.artifact, isArtifactOpen: true };
+        case 'CLOSE_ARTIFACT':
+            return { ...state, isArtifactOpen: false };
         case 'SET_THEME':
             return { ...state, theme: action.theme };
         case 'SET_TEXT_SIZE':
@@ -129,10 +197,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
                 const loadedState: Partial<AppState> = {
                     sessions: sessions || [],
-                    apiKeys: storedSettings.apiKeys || {},
-                    theme: storedSettings.theme || 'dark', // 'system' isn't default yet, let's stick to dark/simplicity
-                    textSize: storedSettings.textSize || 'medium',
-                    defaultModelConfig: storedSettings.defaultModelConfig || initialState.defaultModelConfig
+                    apiKeys: (storedSettings.apiKeys as Record<string, string>) || {},
+                    customBaseUrls: (storedSettings.customBaseUrls as Record<string, string>) || initialState.customBaseUrls,
+                    theme: (storedSettings.theme as AppState['theme']) || 'dark',
+                    textSize: (storedSettings.textSize as AppState['textSize']) || 'medium',
+                    defaultModelConfig: (storedSettings.defaultModelConfig as AppState['defaultModelConfig']) || initialState.defaultModelConfig
                 };
 
                 dispatch({ type: 'LOAD_STATE', state: loadedState });
@@ -143,6 +212,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             }
         };
         loadState();
+    }, []);
+
+    // Global Command Palette Shortcut (Cmd+K / Ctrl+K)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                dispatch({ type: 'TOGGLE_COMMAND_PALETTE' });
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     // Apply Theme & Text Size to Body
@@ -174,7 +255,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
                 mediaQuery.addEventListener('change', handleChange);
                 return () => mediaQuery.removeEventListener('change', handleChange);
             } else {
-                // Fallback
                 mediaQuery.addListener(handleChange);
                 return () => mediaQuery.removeListener(handleChange);
             }
@@ -188,23 +268,24 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         const saveSettings = async () => {
             const { storage } = await import('@/services/storage');
             await storage.saveSetting('apiKeys', state.apiKeys);
+            await storage.saveSetting('customBaseUrls', state.customBaseUrls);
             await storage.saveSetting('theme', state.theme);
             await storage.saveSetting('textSize', state.textSize);
             await storage.saveSetting('defaultModelConfig', state.defaultModelConfig);
         };
         saveSettings();
-    }, [state.apiKeys, state.theme, state.textSize, state.defaultModelConfig, isHydrated]);
+    }, [state.apiKeys, state.customBaseUrls, state.theme, state.textSize, state.defaultModelConfig, isHydrated]);
 
     // Save Session Changes (Debounced manually + Force on Hide)
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const saveSessionNow = async (sessionId: string) => {
+    const saveSessionNow = React.useCallback(async (sessionId: string) => {
         const session = state.sessions.find(s => s.id === sessionId);
         if (session) {
             const { storage } = await import('@/services/storage');
             await storage.saveSession(session);
         }
-    };
+    }, [state.sessions]);
 
     useEffect(() => {
         if (!isHydrated) return;
@@ -217,12 +298,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
                 saveTimeoutRef.current = setTimeout(() => {
                     saveSessionNow(session.id);
                     saveTimeoutRef.current = null;
-                }, 1000); // 1s debounce
+                }, 1000);
             }
         }
-    }, [state.sessions, state.currentSessionId, isHydrated]);
+    }, [state.sessions, state.currentSessionId, isHydrated, saveSessionNow]);
 
-    // Force save on visibility hidden (Mobile tab switching / Desktop minimize)
+    // Force save on visibility hidden
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden' && state.currentSessionId) {
@@ -232,18 +313,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [state.currentSessionId, state.sessions]);
-
-    // Note: We also need to handle DELETION from IDB. 
-    // The reducer handles state, but we need a side-effect for deletion.
-    // We can't easy detect deletion here without `previousState`.
-    // Refactoring to Middleware pattern in future is better, but for now we'll assume `deleteSession` is rare 
-    // and we might need to expose storage directly to the component calling delete, OR handling it here is tricky.
-    // actually, let's keep it simple: The Sidebar delete button should probably call a helper that dispatches AND deletes from DB.
-    // But to adhere to strict flux: actions should be pure.
-    // Workaround: We will ignore deletion sync here and handle it where dispatch is called, OR we scan IDB vs State? Too expensive.
-    // Correct fix: Add a dedicated effect for deletion? No.
-    // Let's modify the Sidebar to call storage.deleteSession directly.
+    }, [state.currentSessionId, state.sessions, saveSessionNow]);
 
     if (!isHydrated) {
         return (

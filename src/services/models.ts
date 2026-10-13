@@ -3,80 +3,117 @@ import { ModelConfig } from "@/types/llm";
 export interface AIModelDefinition {
     id: string;
     name: string;
-    providerId: string;
+    providerId: 'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'groq' | 'ollama' | 'lmstudio' | 'webllm' | 'custom';
     isFree: boolean;
+    isLocal?: boolean;
     contextWindow?: number;
+    costPer1kInput?: number;
+    costPer1kOutput?: number;
     description?: string;
 }
 
 // Master list of available models
 export const AVAILABLE_MODELS: AIModelDefinition[] = [
-    // Free Models (Groq - requires free API key from console.groq.com)
+    // In-Browser WebGPU Models (Zero installation, zero network packets)
+    {
+        id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
+        name: 'Llama 3.2 1B (In-Browser WebGPU)',
+        providerId: 'webllm',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 8192,
+        description: 'Runs directly in your browser tab via WebGPU • 0 install'
+    },
+    {
+        id: 'gemma-2-2b-it-q4f16_1-MLC',
+        name: 'Gemma 2 2B (In-Browser WebGPU)',
+        providerId: 'webllm',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 8192,
+        description: 'Google Gemma running in-browser via GPU • 0 install'
+    },
+
+    // Local Native LLMs (Ollama - Zero Network Telemetry)
+    {
+        id: 'llama3.3',
+        name: 'Llama 3.3 (Local Ollama)',
+        providerId: 'ollama',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 128000,
+        description: 'Zero telemetry • Running locally on your machine'
+    },
+    {
+        id: 'llama3.2',
+        name: 'Llama 3.2 (Local Ollama)',
+        providerId: 'ollama',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 128000,
+        description: 'Fast, lightweight local edge model'
+    },
+    {
+        id: 'deepseek-r1',
+        name: 'DeepSeek R1 (Local Ollama)',
+        providerId: 'ollama',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 64000,
+        description: 'Local distilled reasoning model'
+    },
+    {
+        id: 'qwen2.5',
+        name: 'Qwen 2.5 (Local Ollama)',
+        providerId: 'ollama',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 32768,
+        description: 'Alibaba open weights running in Ollama'
+    },
+    {
+        id: 'mistral',
+        name: 'Mistral 7B (Local Ollama)',
+        providerId: 'ollama',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 32768,
+        description: 'Efficient local general-purpose model'
+    },
+    {
+        id: 'local-model',
+        name: 'LM Studio (Active Model)',
+        providerId: 'lmstudio',
+        isFree: true,
+        isLocal: true,
+        contextWindow: 32768,
+        description: 'Connects to LM Studio local server on port 1234'
+    },
+
+    // Free Fast Cloud Models (Groq)
     {
         id: 'llama-3.3-70b-versatile',
-        name: 'Llama 3.3 70B',
+        name: 'Llama 3.3 70B (Groq)',
         providerId: 'groq',
         isFree: true,
         contextWindow: 128000,
-        description: 'Meta\'s latest, most capable open model'
+        description: 'Meta\'s open model hosted on Groq LPUs'
     },
     {
         id: 'llama-3.1-8b-instant',
-        name: 'Llama 3.1 8B',
+        name: 'Llama 3.1 8B (Groq)',
         providerId: 'groq',
         isFree: true,
         contextWindow: 128000,
-        description: 'Fast, lightweight model for quick tasks'
+        description: 'Ultra-fast low-latency cloud model'
     },
     {
         id: 'mixtral-8x7b-32768',
-        name: 'Mixtral 8x7B',
+        name: 'Mixtral 8x7B (Groq)',
         providerId: 'groq',
         isFree: true,
         contextWindow: 32768,
-        description: 'Mistral\'s powerful MoE model'
-    },
-    {
-        id: 'gemma2-9b-it',
-        name: 'Gemma 2 9B',
-        providerId: 'groq',
-        isFree: true,
-        contextWindow: 8192,
-        description: 'Google\'s efficient open model'
-    },
-
-    // Paid Models - OpenAI
-    {
-        id: 'gpt-4o',
-        name: 'GPT-4o',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 128000,
-        description: 'OpenAI\'s flagship multimodal model'
-    },
-    {
-        id: 'gpt-4o-mini',
-        name: 'GPT-4o Mini',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 128000,
-        description: 'Fast and affordable'
-    },
-    {
-        id: 'gpt-4-turbo',
-        name: 'GPT-4 Turbo',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 128000,
-        description: 'High intelligence model'
-    },
-    {
-        id: 'gpt-3.5-turbo',
-        name: 'GPT-3.5 Turbo',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 16385,
-        description: 'Fast and cost-effective'
+        description: 'Mistral MoE running at high tokens/sec'
     },
 
     // Paid Models - Anthropic
@@ -86,7 +123,19 @@ export const AVAILABLE_MODELS: AIModelDefinition[] = [
         providerId: 'anthropic',
         isFree: false,
         contextWindow: 200000,
-        description: 'Anthropic\'s balanced flagship'
+        costPer1kInput: 0.003,
+        costPer1kOutput: 0.015,
+        description: 'Anthropic\'s industry-leading coding flagship'
+    },
+    {
+        id: 'claude-3-5-haiku-20241022',
+        name: 'Claude 3.5 Haiku',
+        providerId: 'anthropic',
+        isFree: false,
+        contextWindow: 200000,
+        costPer1kInput: 0.0008,
+        costPer1kOutput: 0.004,
+        description: 'Lightning-fast compact Claude model'
     },
     {
         id: 'claude-3-opus-20240229',
@@ -94,15 +143,41 @@ export const AVAILABLE_MODELS: AIModelDefinition[] = [
         providerId: 'anthropic',
         isFree: false,
         contextWindow: 200000,
-        description: 'Most capable Claude model'
+        costPer1kInput: 0.015,
+        costPer1kOutput: 0.075,
+        description: 'Deep analytical synthesis and reasoning'
+    },
+
+    // Paid Models - OpenAI
+    {
+        id: 'gpt-4o',
+        name: 'GPT-4o',
+        providerId: 'openai',
+        isFree: false,
+        contextWindow: 128000,
+        costPer1kInput: 0.0025,
+        costPer1kOutput: 0.01,
+        description: 'OpenAI\'s flagship multimodal intelligence'
     },
     {
-        id: 'claude-3-haiku-20240307',
-        name: 'Claude 3 Haiku',
-        providerId: 'anthropic',
+        id: 'gpt-4o-mini',
+        name: 'GPT-4o Mini',
+        providerId: 'openai',
         isFree: false,
-        contextWindow: 200000,
-        description: 'Fast and compact'
+        contextWindow: 128000,
+        costPer1kInput: 0.00015,
+        costPer1kOutput: 0.0006,
+        description: 'Affordable, low-latency reasoning'
+    },
+    {
+        id: 'o3-mini',
+        name: 'o3-mini',
+        providerId: 'openai',
+        isFree: false,
+        contextWindow: 128000,
+        costPer1kInput: 0.0011,
+        costPer1kOutput: 0.0044,
+        description: 'Next-generation STEM reasoning model'
     },
 
     // Paid Models - DeepSeek
@@ -112,7 +187,9 @@ export const AVAILABLE_MODELS: AIModelDefinition[] = [
         providerId: 'deepseek',
         isFree: false,
         contextWindow: 64000,
-        description: 'DeepSeek\'s flagship chat model'
+        costPer1kInput: 0.00014,
+        costPer1kOutput: 0.00028,
+        description: 'DeepSeek\'s flagship 671B MoE chat model'
     },
     {
         id: 'deepseek-reasoner',
@@ -120,51 +197,71 @@ export const AVAILABLE_MODELS: AIModelDefinition[] = [
         providerId: 'deepseek',
         isFree: false,
         contextWindow: 64000,
-        description: 'Advanced reasoning model'
+        costPer1kInput: 0.00055,
+        costPer1kOutput: 0.00219,
+        description: 'Open reasoning model with chain-of-thought'
     },
 
-    // Futuristic Models (2025-2026)
+    // Gemini
     {
-        id: 'o3-mini',
-        name: 'OpenAI o3-mini',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 128000,
-        description: 'OpenAI\'s latest reasoning model'
-    },
-    {
-        id: 'gpt-5-preview',
-        name: 'GPT-5 Preview',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 1000000,
-        description: 'Next-gen intelligence'
-    },
-    {
-        id: 'gemini-3-pro-exp',
-        name: 'Gemini 3 Pro (Exp)',
+        id: 'gemini-1.5-pro',
+        name: 'Gemini 1.5 Pro',
         providerId: 'gemini',
         isFree: false,
-        contextWindow: 10000000,
-        description: '2026 Era Experimental Release'
+        contextWindow: 2000000,
+        costPer1kInput: 0.00125,
+        costPer1kOutput: 0.005,
+        description: 'Google\'s 2M context multi-modal flagship'
     },
     {
-        id: 'claude-4-sonnet-preview',
-        name: 'Claude 4 Sonnet',
-        providerId: 'anthropic',
+        id: 'gemini-1.5-flash',
+        name: 'Gemini 1.5 Flash',
+        providerId: 'gemini',
         isFree: false,
-        contextWindow: 500000,
-        description: 'Ultra-advanced reasoning'
-    },
+        contextWindow: 1000000,
+        costPer1kInput: 0.000075,
+        costPer1kOutput: 0.0003,
+        description: 'High-speed lightweight Gemini engine'
+    }
 ];
 
-// Helper to get models available based on API keys
-export function getAvailableModels(apiKeys: Record<string, string>): AIModelDefinition[] {
-    // If we have an API key, all models for that provider become available
-    return AVAILABLE_MODELS.filter(model => {
-        if (model.isFree) {
-            return true; // Always show free models, Groq key check happens in adapter
-        }
+export function estimateCost(modelId: string, inputTokens: number, outputTokens: number): number {
+    const model = getModelById(modelId);
+    if (!model || model.isLocal || model.isFree) return 0;
+    const inputCost = ((model.costPer1kInput || 0) * inputTokens) / 1000;
+    const outputCost = ((model.costPer1kOutput || 0) * outputTokens) / 1000;
+    return Math.round((inputCost + outputCost) * 100000) / 100000;
+}
+
+// Helper to get models available based on API keys & local config
+export function getAvailableModels(
+    apiKeys: Record<string, string>,
+    discoveredOllamaModels?: string[]
+): AIModelDefinition[] {
+    const list = [...AVAILABLE_MODELS];
+
+    // If dynamically discovered Ollama models are present, prepend or replace
+    if (discoveredOllamaModels && discoveredOllamaModels.length > 0) {
+        discoveredOllamaModels.forEach(mName => {
+            if (!list.some(m => m.id === mName && m.providerId === 'ollama')) {
+                list.unshift({
+                    id: mName,
+                    name: `${mName} (Ollama)`,
+                    providerId: 'ollama',
+                    isFree: true,
+                    isLocal: true,
+                    description: 'Local model detected in your Ollama library'
+                });
+            }
+        });
+    }
+
+    return list.filter(model => {
+        // Local models are always visible
+        if (model.isLocal) return true;
+        // Free cloud models (Groq requires key or free)
+        if (model.isFree) return true;
+        // Paid models require key
         return !!apiKeys[model.providerId];
     });
 }
@@ -175,10 +272,15 @@ export function getModelById(modelId: string): AIModelDefinition | undefined {
 }
 
 // Helper to create ModelConfig from AIModelDefinition
-export function createModelConfig(model: AIModelDefinition, temperature = 0.7): ModelConfig {
+export function createModelConfig(
+    model: AIModelDefinition,
+    temperature = 0.7,
+    baseUrl?: string
+): ModelConfig {
     return {
-        provider: model.providerId as ModelConfig['provider'],
+        provider: model.providerId,
         modelId: model.id,
-        temperature
+        temperature,
+        baseUrl
     };
 }
