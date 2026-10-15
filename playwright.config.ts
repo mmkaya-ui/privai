@@ -16,7 +16,9 @@ export default defineConfig({
     timeout: 60_000,
     fullyParallel: false,
     workers: 1,
-    reporter: [["list"]],
+    // On CI, failures also become GitHub annotations (readable in the PR without downloading logs).
+    reporter: process.env.CI ? [["list"], ["github"]] : [["list"]],
+    retries: 0,
     use: {
         baseURL: `http://localhost:${PORT}`,
         launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
