@@ -1,6 +1,10 @@
 /**
- * PrivAI In-Browser Local Document RAG Engine
- * Zero Server Uploads: 100% Client-Side Parsing, Chunking & Vector Search
+ * In-browser retrieval over attached documents.
+ *
+ * Text extraction lives in ./attachments.ts. Here the text is split into overlapping chunks and
+ * ranked against the question with TF-IDF + cosine similarity, all in memory (no embeddings model,
+ * nothing persisted). Whole files are never sent anywhere; the top-ranked excerpts are added to the
+ * prompt, so they DO go to whichever model the user is chatting with (a cloud provider or a local one).
  */
 
 export interface DocumentChunk {
@@ -14,46 +18,6 @@ export interface DocumentChunk {
 export interface ScoredChunk {
     chunk: DocumentChunk;
     score: number; // 0 to 1
-}
-
-/**
- * Parses files purely client-side without any server API calls
- */
-export async function parseDocument(file: File): Promise<string> {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-
-    // Plain text / code formats
-    if (['txt', 'md', 'json', 'csv', 'js', 'ts', 'tsx', 'jsx', 'py', 'html', 'css', 'yaml', 'yml', 'xml', 'sql'].includes(ext || '')) {
-        return await file.text();
-    }
-
-    // PDF client-side parsing fallback
-    if (ext === 'pdf') {
-        const buffer = await file.arrayBuffer();
-        const bytes = new Uint8Array(buffer);
-        // Extract ASCII/UTF-8 readable text segments from PDF streams
-        let text = '';
-        let currentString = '';
-        for (let i = 0; i < bytes.length; i++) {
-            const charCode = bytes[i];
-            // printable ASCII or common whitespace
-            if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
-                currentString += String.fromCharCode(charCode);
-            } else {
-                if (currentString.length > 4 && /[a-zA-Z]{3,}/.test(currentString)) {
-                    text += currentString + ' ';
-                }
-                currentString = '';
-            }
-        }
-        if (text.length > 50) {
-            return text.replace(/\s+/g, ' ').trim();
-        }
-        return `[PDF Document: ${file.name} - ${Math.round(file.size / 1024)} KB]`;
-    }
-
-    // Default to plain text
-    return await file.text();
 }
 
 /**
@@ -111,7 +75,7 @@ function tokenize(text: string): string[] {
 }
 
 /**
- * In-Browser Vector & TF-IDF Cosine Similarity Search Engine
+ * TF-IDF cosine-similarity ranking of chunks against a query (sparse vectors built on the fly).
  */
 export function searchRelevantChunks(
     query: string,
@@ -185,24 +149,51 @@ export function searchRelevantChunks(
 }
 
 /**
- * Formats retrieved chunks into private prompt augmentation
+ * Pick the excerpts to send: the best TF-IDF matches, or — when nothing matches (e.g. "summarize
+ * this") — the opening chunks of each attached file so the model still sees the document.
+ */
+export function selectContextChunks(query: string, chunks: DocumentChunk[], topK = 4): ScoredChunk[] {
+    const ranked = searchRelevantChunks(query, chunks, topK);
+    if (ranked.length > 0 || chunks.length === 0) return ranked;
+
+    const byFile = new Map<string, DocumentChunk[]>();
+    for (const c of chunks) byFile.set(c.filename, [...(byFile.get(c.filename) ?? []), c]);
+    const opening: ScoredChunk[] = [];
+    // Round-robin over files so every attachment is represented.
+    for (let i = 0; opening.length < topK; i++) {
+        let added = false;
+        for (const list of byFile.values()) {
+            if (list[i] && opening.length < topK) {
+                opening.push({ chunk: list[i], score: 0 });
+                added = true;
+            }
+        }
+        if (!added) break;
+    }
+    return opening;
+}
+
+/**
+ * Formats the selected excerpts as a prompt preamble. The wording is deliberately factual:
+ * these excerpts are part of the request sent to the model.
  */
 export function formatRAGContext(scoredChunks: ScoredChunk[]): string {
     if (scoredChunks.length === 0) return '';
 
     const lines = [
-        `[PRIVAI LOCAL DOCUMENT INTELLIGENCE (Zero bytes transmitted to external servers)]:`,
-        `The user has attached local private documents on their machine. Use the following context to answer:`,
+        `[Excerpts from files the user attached. Text was extracted in the browser; only these excerpts are included in this request.]`,
+        `Use them to answer the question that follows:`,
         ''
     ];
 
     scoredChunks.forEach(({ chunk, score }) => {
         const pct = Math.round(score * 100);
-        lines.push(`--- Source: ${chunk.filename} (Match Relevance: ${pct}%) ---`);
+        const label = score > 0 ? `match ${pct}%` : `opening of the document`;
+        lines.push(`--- Source: ${chunk.filename} (${label}) ---`);
         lines.push(chunk.content);
         lines.push('');
     });
 
-    lines.push(`[END OF LOCAL CONTEXT]\n`);
+    lines.push(`[End of excerpts]\n`);
     return lines.join('\n');
 }

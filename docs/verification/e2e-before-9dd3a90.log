@@ -1,0 +1,169 @@
+# e2e/privai.spec.ts run against the ORIGINAL commit 9dd3a90 (Chromium 141 headless, 2026-10-15).
+# Only change to that checkout: next/font/google stubbed, because the original build cannot fetch Google Fonts offline
+# (see build-before-9dd3a90.log).
+
+
+Running 10 tests using 1 worker
+
+  ✘   1 e2e/privai.spec.ts:87:5 › privacy copy matches what is actually stored and sent (5.8s)
+  ✘   2 e2e/privai.spec.ts:106:5 › failed / empty assistant turns are not sent back to the model (1.3s)
+  ✘   3 e2e/privai.spec.ts:132:5 › a reply that finishes after switching chats is saved (6.3s)
+  ✘   4 e2e/privai.spec.ts:146:5 › PDF attachment: text from a real (compressed) PDF reaches the prompt (1.4s)
+  ✘   5 e2e/privai.spec.ts:159:5 › DOCX attachment: document text reaches the prompt (1.2s)
+  ✘   6 e2e/privai.spec.ts:168:5 › image attachment: no binary junk is sent and the user is told it was not sent (6.3s)
+  ✓   7 e2e/privai.spec.ts:180:5 › encrypted .privai backup round-trips in a real browser (1.7s)
+  ✓   8 e2e/privai.spec.ts:213:5 › no analytics or third-party requests: only the app itself and the chosen provider (1.1s)
+  ✘   9 e2e/privai.spec.ts:226:5 › Ollama: 'Test Connection' puts installed models in the model picker, and chat runs locally (1.0m)
+  ✓  10 e2e/privai.spec.ts:255:5 › works offline after the first visit (service worker precache) (1.4s)
+
+
+  1) e2e/privai.spec.ts:87:5 › privacy copy matches what is actually stored and sent ───────────────
+
+    Error: expect(locator).not.toContainText(expected) failed
+
+    Locator: locator('body')
+    Expected pattern: not /encrypted local storage/i
+    Received string: "PrivAINew ChatSearch or command...⌘KNo chats yet.Conversations are encrypted & persisted locally.SettingsZero-Telemetry AIDirect BYOK & Local LLMs100% Client-Side • Zero Middleman TelemetryPrivAI WorkspaceDirect-to-provider inference, native offline Ollama, and encrypted local storage. No servers ever log or touch your prompts.Start New ChatLocal Machine AIConnect to Ollama or LM Studio on localhost. Zero network packets sent. Setup Guide →In-Browser WebGPURun Llama 3.2 directly in this browser tab. Zero installs needed.Launch in Tab →Wholesale BYOKClaude, GPT, Gemini, DeepSeek, Groq at pay-per-token API prices.Enter Keys →"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "not toContainText" with timeout 5000ms
+      - waiting for locator('body')
+        9 × locator resolved to <body class="">…</body>
+          - unexpected value "PrivAINew ChatSearch or command...⌘KNo chats yet.Conversations are encrypted & persisted locally.SettingsZero-Telemetry AIDirect BYOK & Local LLMs100% Client-Side • Zero Middleman TelemetryPrivAI WorkspaceDirect-to-provider inference, native offline Ollama, and encrypted local storage. No servers ever log or touch your prompts.Start New ChatLocal Machine AIConnect to Ollama or LM Studio on localhost. Zero network packets sent. Setup Guide →In-Browser WebGPURun Llama 3.2 directly in this browser tab. Zero installs needed.Launch in Tab →Wholesale BYOKClaude, GPT, Gemini, DeepSeek, Groq at pay-per-token API prices.Enter Keys →"
+
+
+      93 |
+      94 |     // So the UI must not claim keys / chats / storage are encrypted.
+    > 95 |     await expect(page.locator("body")).not.toContainText(/encrypted local storage/i);
+         |                                            ^
+      96 |     await startChat(page);
+      97 |     await expect(page.locator("body")).not.toContainText(/Conversations are encrypted/i);
+      98 |     // With a cloud model selected, the input must not claim on-device execution.
+        at /home/claude/before/e2e/privai.spec.ts:95:44
+
+  2) e2e/privai.spec.ts:106:5 › failed / empty assistant turns are not sent back to the model ──────
+
+    Error: empty turns sent
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "content": "",
+    +     "role": "assistant",
+    +   },
+    + ]
+
+      124 |
+      125 |     const sent = bodies[0].messages;
+    > 126 |     expect(sent.filter(m => !m.content.trim()), "empty turns sent").toEqual([]);
+          |                                                                     ^
+      127 |     expect(sent.filter(m => m.content.startsWith("**Error**")), "error text sent as an assistant turn").toEqual([]);
+      128 |     // With the failed replies removed, the user turns are adjacent and get merged into one turn.
+      129 |     expect(sent).toEqual([{ role: "user", content: "first question\n\nsecond question\n\nthird question" }]);
+        at /home/claude/before/e2e/privai.spec.ts:126:69
+
+  3) e2e/privai.spec.ts:132:5 › a reply that finishes after switching chats is saved ───────────────
+
+    Error: chat A was never written to IndexedDB
+
+    expect(received).toBeTruthy()
+
+    Received: undefined
+
+      140 |     const sessions = await idb<{ messages: { role: string; content: string }[] }[]>(page, `return await p(db.transaction("sessions").objectStore("sessions").getAll());`);
+      141 |     const chatA = sessions.find(s => s.messages.some(m => m.content === "hello from chat A"));
+    > 142 |     expect(chatA, "chat A was never written to IndexedDB").toBeTruthy();
+          |                                                            ^
+      143 |     expect(chatA!.messages.find(m => m.role === "assistant")?.content).toBe(MOCK_REPLY);
+      144 | });
+      145 |
+        at /home/claude/before/e2e/privai.spec.ts:142:60
+
+  4) e2e/privai.spec.ts:146:5 › PDF attachment: text from a real (compressed) PDF reaches the prompt 
+
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "4,750 euros"
+    Received string:    "What is the quarterly retainer?"
+
+      152 |
+      153 |     const prompt = lastUser(bodies[0]);
+    > 154 |     expect(prompt).toContain("4,750 euros");
+          |                    ^
+      155 |     // Excerpts are sent to the provider, so the prompt must not say "zero bytes transmitted".
+      156 |     expect(prompt).not.toMatch(/zero bytes transmitted/i);
+      157 | });
+        at /home/claude/before/e2e/privai.spec.ts:154:20
+
+  5) e2e/privai.spec.ts:159:5 › DOCX attachment: document text reaches the prompt ──────────────────
+
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "three days per week"
+    Received string:    "How many days per week can staff work remotely?"
+
+      163 |     await send(page, "How many days per week can staff work remotely?", ["handbook.docx"]);
+      164 |     await expect(page.getByText(MOCK_REPLY)).toBeVisible();
+    > 165 |     expect(lastUser(bodies[0])).toContain("three days per week");
+          |                                 ^
+      166 | });
+      167 |
+      168 | test("image attachment: no binary junk is sent and the user is told it was not sent", async ({ page }) => {
+        at /home/claude/before/e2e/privai.spec.ts:165:33
+
+  6) e2e/privai.spec.ts:168:5 › image attachment: no binary junk is sent and the user is told it was not sent 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText(/photo\.png.*not sent/i)
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText(/photo\.png.*not sent/i)
+
+
+      175 |     const prompt = lastUser(bodies[0]);
+      176 |     expect(prompt).not.toMatch(/IHDR|IDAT|�/);
+    > 177 |     await expect(page.getByText(/photo\.png.*not sent/i)).toBeVisible();
+          |                                                           ^
+      178 | });
+      179 |
+      180 | test("encrypted .privai backup round-trips in a real browser", async ({ page }) => {
+        at /home/claude/before/e2e/privai.spec.ts:177:59
+
+  7) e2e/privai.spec.ts:226:5 › Ollama: 'Test Connection' puts installed models in the model picker, and chat runs locally 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for getByText('qwen3:8b (Ollama)')
+
+
+      247 |     await startChat(page);
+      248 |     await page.getByRole("button", { name: /COMPUTE CORE|LOCAL RUNTIME/ }).click();
+    > 249 |     await page.getByText("qwen3:8b (Ollama)").click();
+          |                                               ^
+      250 |     await send(page, "hello local model");
+      251 |     await expect(page.getByText("LOCAL-OK")).toBeVisible();
+      252 |     expect(chats[0].model).toBe("qwen3:8b");
+        at /home/claude/before/e2e/privai.spec.ts:249:47
+
+  7 failed
+    e2e/privai.spec.ts:87:5 › privacy copy matches what is actually stored and sent ────────────────
+    e2e/privai.spec.ts:106:5 › failed / empty assistant turns are not sent back to the model ───────
+    e2e/privai.spec.ts:132:5 › a reply that finishes after switching chats is saved ────────────────
+    e2e/privai.spec.ts:146:5 › PDF attachment: text from a real (compressed) PDF reaches the prompt 
+    e2e/privai.spec.ts:159:5 › DOCX attachment: document text reaches the prompt ───────────────────
+    e2e/privai.spec.ts:168:5 › image attachment: no binary junk is sent and the user is told it was not sent 
+    e2e/privai.spec.ts:226:5 › Ollama: 'Test Connection' puts installed models in the model picker, and chat runs locally 
+  3 passed (1.6m)

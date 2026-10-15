@@ -6,7 +6,9 @@ import { MessageBubble } from './MessageBubble';
 import { ErrorBoundary } from './ErrorBoundary';
 import { InputArea } from './InputArea';
 import { Menu, Square, WifiOff, Command, PanelRightOpen, PanelRightClose, Swords, Cpu, Zap, Key, BookOpen, ShieldCheck } from 'lucide-react';
-import { Message } from '@/types/llm';
+import type { Attachment, Message } from '@/types/llm';
+import type { DocumentChunk } from '@/services/rag';
+import { buildPromptHistory } from '@/services/history';
 import { v4 as uuidv4 } from 'uuid';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { ModelSelector } from './ModelSelector';
@@ -37,136 +39,58 @@ export const ChatArea = () => {
         }
     };
 
-    const handleSend = async (content: string, attachments: File[]) => {
-        if (!state.currentSessionId) return;
-
-        const currentSession = state.sessions.find(s => s.id === state.currentSessionId);
-        if (!currentSession) return;
-
+    /** Stream a reply into `aiMsgId`, recording errors and early stops as non-conversational turns. */
+    const runCompletion = async (
+        sessionId: string,
+        aiMsgId: string,
+        history: Message[],
+        sources?: { filename: string; relevance: number }[]
+    ) => {
         const provider = state.defaultModelConfig.provider;
-        const isLocal = provider === 'ollama' || provider === 'lmstudio' || provider === 'webllm';
-
-        // 1. Add User Message
-        const userMsg: Message = {
-            id: uuidv4(),
-            role: 'user',
-            content,
-            timestamp: Date.now(),
-            attachments: attachments.map(f => ({
-                id: uuidv4(),
-                type: f.type.startsWith('image') ? 'image' : 'file',
-                name: f.name,
-                data: '',
-                mimeType: f.type
-            }))
-        };
-        dispatch({ type: 'ADD_MESSAGE', sessionId: state.currentSessionId, message: userMsg });
-
-        // Offline Check (allow local models even if offline!)
-        if (!isOnline && !isLocal) {
-            const offlineMsg: Message = {
-                id: uuidv4(),
-                role: 'assistant',
-                content: "⚠️ **You are offline.** Your message is saved, but Cloud AI cannot reply until you are connected. Switch to **Local Ollama** to chat 100% offline!",
-                timestamp: Date.now(),
-                model: 'system'
-            };
-            dispatch({ type: 'ADD_MESSAGE', sessionId: state.currentSessionId, message: offlineMsg });
-            return;
-        }
-
-        // 2. Prepare for Generation
         const apiKey = state.apiKeys[provider] || "";
-        if (!isLocal && !apiKey) {
-            dispatch({ type: 'TOGGLE_SETTINGS', open: true });
-            return;
-        }
-
         const effectiveConfig = {
             ...state.defaultModelConfig,
             baseUrl: state.customBaseUrls[provider] || state.defaultModelConfig.baseUrl
         };
 
-        const aiMsgId = uuidv4();
-        dispatch({
-            type: 'ADD_MESSAGE',
-            sessionId: state.currentSessionId,
-            message: {
-                id: aiMsgId,
-                role: 'assistant',
-                content: "",
-                timestamp: Date.now(),
-                model: state.defaultModelConfig.modelId
-            }
-        });
-
-        // Abort previous
         if (abortControllerRef.current) abortControllerRef.current.abort();
         const controller = new AbortController();
         abortControllerRef.current = controller;
         setIsGenerating(true);
 
+        let streamed = "";
         try {
-            const history = currentSession.messages.slice(-10);
-
-            // In-Browser Zero-Server Local Document RAG
-            let promptUserMsg = userMsg;
-            let detectedSources: { filename: string; relevance: number }[] | undefined = undefined;
-
-            if (attachments.length > 0) {
-                try {
-                    const { parseDocument, chunkDocument, searchRelevantChunks, formatRAGContext } = await import('@/services/rag');
-                    const allChunks = [];
-                    for (const file of attachments) {
-                        const docText = await parseDocument(file);
-                        const fileChunks = chunkDocument(docText, file.name);
-                        allChunks.push(...fileChunks);
-                    }
-                    if (allChunks.length > 0) {
-                        const topChunks = searchRelevantChunks(content || "Summarize the attached document", allChunks, 4);
-                        if (topChunks.length > 0) {
-                            detectedSources = topChunks.map(c => ({
-                                filename: c.chunk.filename,
-                                relevance: Math.round(c.score * 100)
-                            }));
-                            promptUserMsg = {
-                                ...userMsg,
-                                content: `${formatRAGContext(topChunks)}\nUser Question: ${content}`
-                            };
-                        }
-                    }
-                } catch (ragErr) {
-                    console.error("Local RAG processing notice:", ragErr);
-                }
-            }
-
-            const fullMessages = [...history, promptUserMsg];
-
             await streamChat(
-                fullMessages,
+                history,
                 effectiveConfig,
                 apiKey,
                 (progress) => {
+                    streamed = progress.content;
                     dispatch({
                         type: 'UPDATE_MESSAGE',
-                        sessionId: state.currentSessionId!,
+                        sessionId,
                         messageId: aiMsgId,
                         content: progress.content,
                         telemetry: progress.telemetry,
-                        sources: detectedSources
+                        sources
                     });
                 },
                 controller.signal
             );
         } catch (err: unknown) {
             const error = err as Error;
-            if (error.name === 'AbortError') return;
-
+            if (error.name === 'AbortError') {
+                dispatch(streamed
+                    ? { type: 'UPDATE_MESSAGE', sessionId, messageId: aiMsgId, content: streamed, status: 'stopped' }
+                    : { type: 'UPDATE_MESSAGE', sessionId, messageId: aiMsgId, content: '_Stopped before the model replied._', status: 'notice' });
+                return;
+            }
             dispatch({
                 type: 'UPDATE_MESSAGE',
-                sessionId: state.currentSessionId,
+                sessionId,
                 messageId: aiMsgId,
-                content: `**Error**: ${error.message || 'Unknown error occurred'}`
+                content: `**Error**: ${error.message || 'Unknown error occurred'}`,
+                status: 'error'
             });
         } finally {
             if (abortControllerRef.current === controller) {
@@ -176,8 +100,97 @@ export const ChatArea = () => {
         }
     };
 
+    const handleSend = async (content: string, files: File[]) => {
+        const sessionId = state.currentSessionId;
+        if (!sessionId) return;
+        const currentSession = state.sessions.find(s => s.id === sessionId);
+        if (!currentSession) return;
+
+        const provider = state.defaultModelConfig.provider;
+        const isLocal = provider === 'ollama' || provider === 'lmstudio' || provider === 'webllm';
+
+        // 1. Extract text from attachments in this tab. Unsupported files are reported, never guessed at.
+        let promptContent = content;
+        let detectedSources: { filename: string; relevance: number }[] | undefined;
+        const attachments: Attachment[] = [];
+        if (files.length > 0) {
+            setIsGenerating(true);
+            try {
+                const { extractAttachmentText } = await import('@/services/attachments');
+                const { chunkDocument, selectContextChunks, formatRAGContext } = await import('@/services/rag');
+                const allChunks: DocumentChunk[] = [];
+                for (const file of files) {
+                    const base: Attachment = {
+                        id: uuidv4(),
+                        type: file.type.startsWith('image') ? 'image' : 'file',
+                        name: file.name,
+                        data: '',
+                        mimeType: file.type
+                    };
+                    const result = await extractAttachmentText(file);
+                    if (result.ok) {
+                        allChunks.push(...chunkDocument(result.text, file.name));
+                        attachments.push({ ...base, status: 'used', note: 'text extracted in browser' });
+                    } else {
+                        attachments.push({ ...base, status: 'skipped', note: `not sent: ${result.reason}` });
+                    }
+                }
+                const top = selectContextChunks(content || "Summarize the attached document", allChunks, 4);
+                if (top.length > 0) {
+                    detectedSources = top.map(c => ({ filename: c.chunk.filename, relevance: Math.round(c.score * 100) }));
+                    promptContent = `${formatRAGContext(top)}\nUser Question: ${content}`;
+                }
+            } finally {
+                setIsGenerating(false);
+            }
+        }
+
+        // 2. Add the user message (the chat shows what the user typed; the prompt carries the excerpts).
+        const userMsg: Message = {
+            id: uuidv4(),
+            role: 'user',
+            content,
+            timestamp: Date.now(),
+            ...(attachments.length > 0 && { attachments })
+        };
+        dispatch({ type: 'ADD_MESSAGE', sessionId, message: userMsg });
+
+        // Offline: cloud models can't answer (local models still can).
+        if (!isOnline && !isLocal) {
+            dispatch({
+                type: 'ADD_MESSAGE',
+                sessionId,
+                message: {
+                    id: uuidv4(),
+                    role: 'assistant',
+                    content: "⚠️ **You are offline.** Your message is saved, but cloud models cannot reply until you are connected. Local models (Ollama, LM Studio, in-browser WebGPU) still work offline.",
+                    timestamp: Date.now(),
+                    model: 'system',
+                    status: 'notice'
+                }
+            });
+            return;
+        }
+
+        if (!isLocal && !state.apiKeys[provider]) {
+            dispatch({ type: 'TOGGLE_SETTINGS', open: true });
+            return;
+        }
+
+        const aiMsgId = uuidv4();
+        dispatch({
+            type: 'ADD_MESSAGE',
+            sessionId,
+            message: { id: aiMsgId, role: 'assistant', content: "", timestamp: Date.now(), model: state.defaultModelConfig.modelId }
+        });
+
+        const history = buildPromptHistory([...currentSession.messages, { ...userMsg, content: promptContent }]);
+        await runCompletion(sessionId, aiMsgId, history, detectedSources);
+    };
+
     const handleEditPrompt = (messageId: string, newContent: string) => {
-        if (!state.currentSessionId || !session) return;
+        const sessionId = state.currentSessionId;
+        if (!sessionId || !session) return;
         const msgIndex = session.messages.findIndex(m => m.id === messageId);
         if (msgIndex === -1) return;
 
@@ -197,65 +210,18 @@ export const ChatArea = () => {
             type: 'LOAD_STATE',
             state: {
                 sessions: state.sessions.map(s =>
-                    s.id === state.currentSessionId
-                        ? { ...s, messages: truncated, updatedAt: Date.now() }
-                        : s
+                    s.id === sessionId ? { ...s, messages: truncated, updatedAt: Date.now() } : s
                 )
             }
         });
 
-        setTimeout(() => {
-            const aiMsgId = uuidv4();
-            dispatch({
-                type: 'ADD_MESSAGE',
-                sessionId: state.currentSessionId!,
-                message: {
-                    id: aiMsgId,
-                    role: 'assistant',
-                    content: "",
-                    timestamp: Date.now(),
-                    model: state.defaultModelConfig.modelId
-                }
-            });
-
-            const provider = state.defaultModelConfig.provider;
-            const apiKey = state.apiKeys[provider] || "";
-            const controller = new AbortController();
-            abortControllerRef.current = controller;
-            setIsGenerating(true);
-
-            const effectiveConfig = {
-                ...state.defaultModelConfig,
-                baseUrl: state.customBaseUrls[provider] || state.defaultModelConfig.baseUrl
-            };
-
-            streamChat(
-                truncated,
-                effectiveConfig,
-                apiKey,
-                (progress) => {
-                    dispatch({
-                        type: 'UPDATE_MESSAGE',
-                        sessionId: state.currentSessionId!,
-                        messageId: aiMsgId,
-                        content: progress.content,
-                        telemetry: progress.telemetry
-                    });
-                },
-                controller.signal
-            ).catch(err => {
-                if (err.name === 'AbortError') return;
-                dispatch({
-                    type: 'UPDATE_MESSAGE',
-                    sessionId: state.currentSessionId!,
-                    messageId: aiMsgId,
-                    content: `**Error**: ${err.message || 'Unknown error occurred'}`
-                });
-            }).finally(() => {
-                setIsGenerating(false);
-                abortControllerRef.current = null;
-            });
-        }, 50);
+        const aiMsgId = uuidv4();
+        dispatch({
+            type: 'ADD_MESSAGE',
+            sessionId,
+            message: { id: aiMsgId, role: 'assistant', content: "", timestamp: Date.now(), model: state.defaultModelConfig.modelId }
+        });
+        void runCompletion(sessionId, aiMsgId, buildPromptHistory(truncated));
     };
 
     const handleSwitchVariant = (messageId: string, variantIndex: number) => {
@@ -275,14 +241,14 @@ export const ChatArea = () => {
                     <div className="space-y-2">
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                             <ShieldCheck size={13} />
-                            <span>100% Client-Side • Zero Middleman Telemetry</span>
+                            <span>No PrivAI server • No analytics</span>
                         </div>
                         <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
                             PrivAI Workspace
                         </h2>
                         <p className="text-text-muted text-sm leading-relaxed max-w-md mx-auto">
-                            Direct-to-provider inference, native offline Ollama, and encrypted local storage.
-                            No servers ever log or touch your prompts.
+                            There is no PrivAI server: prompts go straight from this tab to the provider you choose, or stay
+                            on your machine with Ollama, LM Studio or in-browser WebGPU. Chats are kept in this browser.
                         </p>
                     </div>
 
@@ -318,7 +284,7 @@ export const ChatArea = () => {
                                     Local Machine AI
                                 </h4>
                                 <p className="text-[11px] text-text-muted mt-1 leading-snug">
-                                    Connect to Ollama or LM Studio on localhost. Zero network packets sent.
+                                    Connect to Ollama or LM Studio on localhost. Prompts never leave your machine.
                                 </p>
                             </div>
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-3 pt-2 border-t border-border/40">
@@ -353,7 +319,7 @@ export const ChatArea = () => {
                                     In-Browser WebGPU
                                 </h4>
                                 <p className="text-[11px] text-text-muted mt-1 leading-snug">
-                                    Run Llama 3.2 directly in this browser tab. Zero installs needed.
+                                    Run Llama 3.2 in this browser tab. No install; weights download once from Hugging Face.
                                 </p>
                             </div>
                             <span className="text-[10px] font-bold text-blue-400 mt-3 pt-2 border-t border-border/40 block">
@@ -502,7 +468,11 @@ export const ChatArea = () => {
 
             {/* Input */}
             <div className="p-4 shrink-0 z-20">
-                <InputArea onSend={handleSend} disabled={isGenerating} />
+                <InputArea
+                    onSend={handleSend}
+                    disabled={isGenerating}
+                    destination={['ollama', 'lmstudio', 'webllm'].includes(state.defaultModelConfig.provider) ? 'local' : 'cloud'}
+                />
             </div>
         </div>
     );

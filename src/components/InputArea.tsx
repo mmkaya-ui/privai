@@ -5,10 +5,12 @@ import { Paperclip, Send, X, ShieldCheck, FileText } from 'lucide-react';
 
 interface InputAreaProps {
     onSend: (content: string, attachments: File[]) => void;
+    /** Where the prompt goes: shown in the footer so the privacy label is always accurate. */
+    destination?: 'local' | 'cloud';
     disabled?: boolean;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
+export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled, destination = 'cloud' }) => {
     const [input, setInput] = useState('');
     const [attachments, setAttachments] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -105,7 +107,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={isDragging ? "Drop your files here for local in-browser indexing..." : "Message PrivAI or ask about your local documents..."}
+                    placeholder={isDragging ? "Drop files to extract their text in this tab..." : "Message PrivAI or ask about your local documents..."}
                     className="w-full bg-transparent border-none text-text-main p-4 resize-none outline-none max-h-[200px] min-h-[56px] placeholder:text-text-faint/60 text-sm leading-relaxed"
                     style={{ color: 'var(--color-text-main)' }}
                     disabled={disabled}
@@ -117,7 +119,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             className="p-2 text-text-muted hover:text-text-main hover:bg-bg-surface-hover rounded-full transition-all duration-200"
-                            title="Attach files (PDF, Markdown, Code, TXT) for Local In-Browser RAG"
+                            title="Attach PDF, DOCX, Markdown, code or text. Text is extracted in this tab; matching excerpts are added to your prompt."
                         >
                             <Paperclip size={18} />
                         </button>
@@ -129,8 +131,8 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, disabled }) => {
                             onChange={handleFileSelect}
                         />
                         <span className="text-[10px] text-text-faint hidden sm:inline-flex items-center gap-1">
-                            <ShieldCheck size={11} className="text-emerald-400" />
-                            <span>100% Private On-Device Execution</span>
+                            <ShieldCheck size={11} className={destination === 'local' ? 'text-emerald-400' : 'text-blue-400'} />
+                            <span>{destination === 'local' ? 'Runs on this device' : 'Sent directly to the provider (no PrivAI server)'}</span>
                         </span>
                     </div>
 

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { ChatSession, Message, ModelConfig, ArtifactData, MessageTelemetry } from '@/types/llm';
+import { sessionsNeedingSave } from './persistence';
 
 // State Definition
 export interface AppState {
@@ -18,6 +19,8 @@ export interface AppState {
     isArtifactOpen: boolean;
     activeView: 'chat' | 'arena';
     defaultModelConfig: ModelConfig;
+    /** Model names reported by the user's Ollama server on the last successful "Test Connection". */
+    discoveredOllamaModels: string[];
 }
 
 // Initial State
@@ -42,6 +45,7 @@ const initialState: AppState = {
         modelId: 'openai/gpt-oss-20b',
         temperature: 0.7,
     },
+    discoveredOllamaModels: [],
 };
 
 // Actions
@@ -53,7 +57,7 @@ export type Action =
     | { type: 'SELECT_SESSION'; sessionId: string }
     | { type: 'CLEAR_SESSION_MESSAGES'; sessionId: string }
     | { type: 'ADD_MESSAGE'; sessionId: string; message: Message }
-    | { type: 'UPDATE_MESSAGE'; sessionId: string; messageId: string; content: string; telemetry?: MessageTelemetry; sources?: { filename: string; relevance: number }[] }
+    | { type: 'UPDATE_MESSAGE'; sessionId: string; messageId: string; content: string; telemetry?: MessageTelemetry; sources?: { filename: string; relevance: number }[]; status?: Message['status'] }
     | { type: 'SWITCH_MESSAGE_VARIANT'; sessionId: string; messageId: string; variantIndex: number }
     | { type: 'TOGGLE_SIDEBAR'; open?: boolean }
     | { type: 'TOGGLE_SETTINGS'; open?: boolean }
@@ -64,6 +68,7 @@ export type Action =
     | { type: 'SET_THEME'; theme: AppState['theme'] }
     | { type: 'SET_TEXT_SIZE'; size: AppState['textSize'] }
     | { type: 'SET_MODEL'; config: ModelConfig }
+    | { type: 'SET_DISCOVERED_OLLAMA_MODELS'; models: string[] }
     | { type: 'LOAD_STATE'; state: Partial<AppState> };
 
 // Reducer
@@ -123,7 +128,8 @@ function appReducer(state: AppState, action: Action): AppState {
                                         ...m,
                                         content: action.content,
                                         ...(action.telemetry ? { telemetry: action.telemetry } : {}),
-                                        ...(action.sources ? { sources: action.sources } : {})
+                                        ...(action.sources ? { sources: action.sources } : {}),
+                                        ...(action.status ? { status: action.status } : {})
                                     }
                                     : m
                             )
@@ -167,6 +173,8 @@ function appReducer(state: AppState, action: Action): AppState {
             return { ...state, textSize: action.size };
         case 'SET_MODEL':
             return { ...state, defaultModelConfig: action.config };
+        case 'SET_DISCOVERED_OLLAMA_MODELS':
+            return { ...state, discoveredOllamaModels: action.models };
         case 'LOAD_STATE':
             return { ...state, ...action.state };
         default:
@@ -184,6 +192,9 @@ const AppContext = createContext<{
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const [state, dispatch] = useReducer(appReducer, initialState);
     const [isHydrated, setIsHydrated] = React.useState(false);
+    /** Session objects as last written to IndexedDB (see sessionsNeedingSave). */
+    const lastSavedRef = useRef<Map<string, ChatSession>>(new Map());
+    const sessionsRef = useRef<ChatSession[]>(state.sessions);
 
     // Load state from IndexedDB on mount
     useEffect(() => {
@@ -201,9 +212,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
                     customBaseUrls: (storedSettings.customBaseUrls as Record<string, string>) || initialState.customBaseUrls,
                     theme: (storedSettings.theme as AppState['theme']) || 'dark',
                     textSize: (storedSettings.textSize as AppState['textSize']) || 'medium',
-                    defaultModelConfig: (storedSettings.defaultModelConfig as AppState['defaultModelConfig']) || initialState.defaultModelConfig
+                    defaultModelConfig: (storedSettings.defaultModelConfig as AppState['defaultModelConfig']) || initialState.defaultModelConfig,
+                    discoveredOllamaModels: (storedSettings.discoveredOllamaModels as string[]) || []
                 };
 
+                for (const s of loadedState.sessions ?? []) lastSavedRef.current.set(s.id, s);
                 dispatch({ type: 'LOAD_STATE', state: loadedState });
             } catch (e) {
                 console.error("Failed to load state from IDB", e);
@@ -272,48 +285,45 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             await storage.saveSetting('theme', state.theme);
             await storage.saveSetting('textSize', state.textSize);
             await storage.saveSetting('defaultModelConfig', state.defaultModelConfig);
+            await storage.saveSetting('discoveredOllamaModels', state.discoveredOllamaModels);
         };
         saveSettings();
-    }, [state.apiKeys, state.customBaseUrls, state.theme, state.textSize, state.defaultModelConfig, isHydrated]);
+    }, [state.apiKeys, state.customBaseUrls, state.theme, state.textSize, state.defaultModelConfig, state.discoveredOllamaModels, isHydrated]);
 
-    // Save Session Changes (Debounced manually + Force on Hide)
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Save session changes: debounced, for EVERY changed chat (not only the one on screen),
+    // and flushed immediately when the tab is hidden.
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const saveSessionNow = React.useCallback(async (sessionId: string) => {
-        const session = state.sessions.find(s => s.id === sessionId);
-        if (session) {
-            const { storage } = await import('@/services/storage');
+    const flushSessions = React.useCallback(async () => {
+        const dirty = sessionsNeedingSave(sessionsRef.current, lastSavedRef.current);
+        if (dirty.length === 0) return;
+        const { storage } = await import('@/services/storage');
+        for (const session of dirty) {
             await storage.saveSession(session);
+            lastSavedRef.current.set(session.id, session);
         }
-    }, [state.sessions]);
+    }, []);
 
     useEffect(() => {
+        sessionsRef.current = state.sessions;
         if (!isHydrated) return;
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+            saveTimeoutRef.current = null;
+            void flushSessions();
+        }, 1000);
+    }, [state.sessions, isHydrated, flushSessions]);
 
-        if (state.currentSessionId) {
-            const session = state.sessions.find(s => s.id === state.currentSessionId);
-            if (session) {
-                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
-                saveTimeoutRef.current = setTimeout(() => {
-                    saveSessionNow(session.id);
-                    saveTimeoutRef.current = null;
-                }, 1000);
-            }
-        }
-    }, [state.sessions, state.currentSessionId, isHydrated, saveSessionNow]);
-
-    // Force save on visibility hidden
     useEffect(() => {
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'hidden' && state.currentSessionId) {
-                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                saveSessionNow(state.currentSessionId);
-            }
+            if (document.visibilityState !== 'hidden') return;
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+            void flushSessions();
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [state.currentSessionId, state.sessions, saveSessionNow]);
+    }, [flushSessions]);
 
     if (!isHydrated) {
         return (

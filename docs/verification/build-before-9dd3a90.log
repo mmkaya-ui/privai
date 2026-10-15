@@ -1,0 +1,12 @@
+Failed to fetch font `Inter`: https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap
+Please check your network connection.
+Failed to fetch font `Inter`: https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap
+Please check your network connection.
+Error: Failed to fetch font `Inter`: https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap
+Please check your network connection.
+    at ignore-listed frames
+Failed to compile.
+src/app/layout.tsx
+`next/font` error:
+Failed to fetch `Inter` from Google Fonts.
+> Build failed because of webpack errors

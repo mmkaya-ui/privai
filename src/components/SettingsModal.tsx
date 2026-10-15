@@ -79,6 +79,7 @@ export const SettingsModal = () => {
         const res = await checkOllamaConnection(url);
         setIsTestingOllama(false);
         if (res.ok) {
+            dispatch({ type: 'SET_DISCOVERED_OLLAMA_MODELS', models: res.models });
             setOllamaStatus({
                 checked: true,
                 ok: true,
@@ -285,7 +286,7 @@ export const SettingsModal = () => {
                     {activeTab === 'local' && (
                         <div className="space-y-5">
                             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 leading-relaxed">
-                                <strong>Native Zero-Telemetry Mode:</strong> Run LLMs directly on your laptop using Ollama or LM Studio. Zero network packets will ever leave your computer.
+                                <strong>Native Zero-Telemetry Mode:</strong> Run LLMs on your own machine with Ollama or LM Studio. Prompts and replies never leave your computer.
                             </div>
 
                             {/* Ollama Host */}
@@ -410,7 +411,7 @@ export const SettingsModal = () => {
                     {activeTab === 'cloud' && (
                         <div className="space-y-4">
                             <p className="text-xs text-text-muted">
-                                PrivAI communicates directly from your browser to each AI provider using client-side BYOK. Keys are encrypted in your local device storage.
+                                PrivAI calls each provider directly from this tab with your own key. Keys are stored unencrypted in this browser&apos;s IndexedDB and are only sent to the provider they belong to. Encrypted backups (.privai) protect them when you move them.
                             </p>
                             {cloudProviders.map(p => (
                                 <div key={p.id} className="space-y-1.5">

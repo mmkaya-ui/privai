@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chunkDocument, searchRelevantChunks, formatRAGContext, parseDocument, type DocumentChunk } from "../rag";
+import { chunkDocument, searchRelevantChunks, selectContextChunks, formatRAGContext, type DocumentChunk } from "../rag";
 
 const words = (n: number, w = "lorem") => Array.from({ length: n }, (_, i) => `${w}${i}`).join(" ");
 
@@ -97,22 +97,41 @@ describe("searchRelevantChunks (TF-IDF cosine)", () => {
 describe("formatRAGContext", () => {
     it("labels each source with its relevance percentage", () => {
         const out = formatRAGContext([{ chunk: { id: "x", filename: "notes.md", content: "Body text", index: 0, wordCount: 2 }, score: 0.837 }]);
-        expect(out).toContain("--- Source: notes.md (Match Relevance: 84%) ---");
+        expect(out).toContain("--- Source: notes.md (match 84%) ---");
         expect(out).toContain("Body text");
         expect(formatRAGContext([])).toBe("");
     });
 });
 
-describe("parseDocument", () => {
-    it("reads text-like files verbatim", async () => {
-        const file = new File(["# Title\nbody"], "readme.md", { type: "text/markdown" });
-        expect(await parseDocument(file)).toBe("# Title\nbody");
+describe("selectContextChunks", () => {
+    const chunks = [
+        ...chunkDocument(`Consulting agreement. ${words(150, "alpha")}`, "contract.txt"),
+        ...chunkDocument(`Handbook. ${words(150, "beta")}`, "handbook.txt"),
+    ];
+
+    it("uses ranked matches when the question matches the documents", () => {
+        const picked = selectContextChunks("consulting agreement", chunks, 2);
+        expect(picked[0].chunk.filename).toBe("contract.txt");
+        expect(picked[0].score).toBeGreaterThan(0);
     });
 
-    it("extracts printable runs from a PDF and falls back to a placeholder", async () => {
-        const pdfLike = new File([new Uint8Array([0, 1, ...new TextEncoder().encode("Quarterly revenue grew strongly across Europe and Asia this year"), 0, 2])], "r.pdf");
-        expect(await parseDocument(pdfLike)).toContain("Quarterly revenue grew strongly");
-        const binary = new File([new Uint8Array(64)], "scan.pdf");
-        expect(await parseDocument(binary)).toMatch(/^\[PDF Document: scan\.pdf/);
+    it("falls back to the opening of every file when nothing matches (e.g. 'summarize this')", () => {
+        const picked = selectContextChunks("summarize this please", chunks, 4);
+        expect(picked.map(p => p.score)).toEqual([0, 0, 0, 0]);
+        expect(picked.slice(0, 2).map(p => [p.chunk.filename, p.chunk.index])).toEqual([["contract.txt", 0], ["handbook.txt", 0]]);
+        expect(formatRAGContext(picked)).toContain("opening of the document");
+    });
+
+    it("returns nothing when there are no chunks", () => {
+        expect(selectContextChunks("anything", [], 4)).toEqual([]);
+    });
+});
+
+describe("formatRAGContext wording", () => {
+    it("states that excerpts are part of the request (no 'zero bytes transmitted' claim)", () => {
+        const [c] = chunkDocument("The quarterly retainer is 4,750 euros payable quarterly.", "c.txt");
+        const text = formatRAGContext([{ chunk: c, score: 0.9 }]);
+        expect(text).toMatch(/only these excerpts are included in this request/);
+        expect(text).not.toMatch(/zero bytes/i);
     });
 });

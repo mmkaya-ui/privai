@@ -24,14 +24,24 @@ export interface Message {
   variants?: string[]; // Branch versions for edited prompts
   variantIndex?: number; // Active version (0-indexed)
   sources?: { filename: string; relevance: number }[]; // Local RAG source citations
+  /**
+   * Non-conversational messages are shown in the chat but never sent to a model:
+   * 'error' = provider/network failure, 'notice' = app notice (offline, stopped before any output).
+   * 'stopped' = the user stopped a reply that already had output (kept in history).
+   */
+  status?: 'error' | 'notice' | 'stopped';
 }
 
 export interface Attachment {
   id: string;
   type: 'image' | 'file';
   name: string;
-  data: string; // base64 or url
+  /** Not used: file contents are never stored in chat history. Kept for older saved chats. */
+  data: string;
   mimeType: string;
+  /** What happened to the file when the message was sent (text extracted, or why it was skipped). */
+  status?: 'used' | 'skipped';
+  note?: string;
 }
 
 export interface ChatSession {
@@ -87,7 +97,7 @@ export type LLMStreamEvent =
 /**
  * The single contract every inference backend (cloud, localhost, in-browser) implements.
  *
- * Conformance rules (enforced by src/services/providers.conformance.test.ts):
+ * Conformance rules (enforced by src/services/__tests__/providers.conformance.test.ts):
  *  - `stream` yields `token` events in order and `usage` events when the backend reports counts.
  *  - Aborting `signal` stops the stream and rejects with an LLMError whose code is 'aborted'
  *    (its `name` is 'AbortError' so generic abort checks keep working).

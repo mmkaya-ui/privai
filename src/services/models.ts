@@ -175,24 +175,27 @@ export const AVAILABLE_MODELS: AIModelDefinition[] = [
         description: 'OpenAI flagship'
     },
 
-    // DeepSeek (prices NOT re-verified — docs are client-rendered; see PRICING_SOURCES)
+    // DeepSeek. Prices are PEAK rates (UTC 01:00-04:00 and 06:00-10:00, Mon-Fri); off-peak is half,
+    // so cost estimates are an upper bound. `deepseek-chat` / `deepseek-reasoner` are no longer listed.
     {
-        id: 'deepseek-chat',
-        name: 'DeepSeek Chat',
+        id: 'deepseek-flash',
+        name: 'DeepSeek Flash (V4.1)',
         providerId: 'deepseek',
         isFree: false,
-        costPer1kInput: 0.00028,
-        costPer1kOutput: 0.00042,
-        description: 'DeepSeek non-thinking mode'
+        contextWindow: 1000000,
+        costPer1kInput: 0.0003,
+        costPer1kOutput: 0.0012,
+        description: 'Peak price shown; off-peak is half'
     },
     {
-        id: 'deepseek-reasoner',
-        name: 'DeepSeek Reasoner',
+        id: 'deepseek-v4-pro',
+        name: 'DeepSeek V4 Pro',
         providerId: 'deepseek',
         isFree: false,
-        costPer1kInput: 0.00028,
-        costPer1kOutput: 0.00042,
-        description: 'DeepSeek thinking mode'
+        contextWindow: 1000000,
+        costPer1kInput: 0.00132,
+        costPer1kOutput: 0.00396,
+        description: 'Peak price shown; off-peak is half'
     },
 
     // Google Gemini (prompts up to 200K tokens)
@@ -236,11 +239,11 @@ export interface PricingSource {
 
 /** Where each provider's prices come from. Update `asOf` whenever prices are re-checked. */
 export const PRICING_SOURCES: Record<'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'groq', PricingSource> = {
-    openai: { url: 'https://platform.openai.com/docs/pricing', asOf: '2026-10-15', verified: true },
-    anthropic: { url: 'https://docs.anthropic.com/en/docs/about-claude/pricing', asOf: '2026-10-15', verified: true, note: 'Haiku 5.5: $0.10/$0.50 up to 100K-token prompts, $0.50/$2.50 above.' },
+    openai: { url: 'https://developers.openai.com/api/docs/pricing', asOf: '2026-10-15', verified: true, note: 'Short-context standard tier.' },
+    anthropic: { url: 'https://platform.claude.com/docs/en/about-claude/pricing', asOf: '2026-10-15', verified: true, note: 'Haiku 5.5: $0.10/$0.50 up to 100K-token prompts, $0.50/$2.50 above.' },
     gemini: { url: 'https://ai.google.dev/gemini-api/docs/pricing', asOf: '2026-10-15', verified: true, note: 'Prompts ≤200K tokens. 3.8 Flash promo ends 2026-12-31.' },
     groq: { url: 'https://console.groq.com/docs/models', asOf: '2026-10-15', verified: true, note: 'Free tier with rate limits exists; figures are paid-tier prices.' },
-    deepseek: { url: 'https://api-docs.deepseek.com/quick_start/pricing', asOf: '2025-09-29', verified: false, note: 'Pricing page is client-rendered and could not be re-checked; DeepSeek also applies off-peak discounts.' },
+    deepseek: { url: 'https://api-docs.deepseek.com/quick_start/pricing', asOf: '2026-10-15', verified: true, note: 'Peak prices (cache miss); off-peak is half. Checked in a browser because the page is client-rendered.' },
 };
 
 /** USD cost for a request, from the per-1K-token prices above. Local models are always 0. */
@@ -302,4 +305,12 @@ export function createModelConfig(
         temperature,
         baseUrl
     };
+}
+
+/** Display a USD cost: sub-cent precision, never a misleading "$0.0000" for a non-zero cost. */
+export function formatCost(usd: number): string {
+    if (!Number.isFinite(usd) || usd <= 0) return "$0";
+    if (usd < 0.0001) return "<$0.0001";
+    if (usd < 1) return `$${usd.toFixed(4)}`;
+    return `$${usd.toFixed(2)}`;
 }

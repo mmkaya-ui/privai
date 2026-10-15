@@ -1,0 +1,17 @@
+# Same e2e/privai.spec.ts run against the fixed branch (Chromium 141 headless, 2026-10-15).
+
+
+Running 10 tests using 1 worker
+
+  ✓   1 e2e/privai.spec.ts:87:5 › privacy copy matches what is actually stored and sent (1.3s)
+  ✓   2 e2e/privai.spec.ts:106:5 › failed / empty assistant turns are not sent back to the model (1.4s)
+  ✓   3 e2e/privai.spec.ts:132:5 › a reply that finishes after switching chats is saved (6.1s)
+  ✓   4 e2e/privai.spec.ts:146:5 › PDF attachment: text from a real (compressed) PDF reaches the prompt (1.5s)
+  ✓   5 e2e/privai.spec.ts:159:5 › DOCX attachment: document text reaches the prompt (1.4s)
+  ✓   6 e2e/privai.spec.ts:168:5 › image attachment: no binary junk is sent and the user is told it was not sent (1.1s)
+  ✓   7 e2e/privai.spec.ts:180:5 › encrypted .privai backup round-trips in a real browser (1.9s)
+  ✓   8 e2e/privai.spec.ts:213:5 › no analytics or third-party requests: only the app itself and the chosen provider (1.7s)
+  ✓   9 e2e/privai.spec.ts:226:5 › Ollama: 'Test Connection' puts installed models in the model picker, and chat runs locally (1.4s)
+  ✓  10 e2e/privai.spec.ts:255:5 › works offline after the first visit (service worker precache) (1.3s)
+
+  10 passed (21.4s)

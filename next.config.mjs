@@ -1,4 +1,3 @@
-/** @type {import('next').NextConfig} */
 import withSerwistInit from "@serwist/next";
 
 const withSerwist = withSerwistInit({
@@ -8,8 +7,7 @@ const withSerwist = withSerwistInit({
     maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
 });
 
-const nextConfig = {
-    // Other config...
-};
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
 
 export default withSerwist(nextConfig);

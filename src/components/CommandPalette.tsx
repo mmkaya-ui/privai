@@ -57,7 +57,7 @@ export const CommandPalette = () => {
         items.push({
             id: `model-${m.id}`,
             title: m.name,
-            subtitle: m.isLocal ? 'Local Zero-Telemetry' : m.description,
+            subtitle: m.isLocal ? 'Runs on this device' : m.description,
             category: 'Models',
             icon: m.isLocal ? <Cpu size={16} className="text-green-400" /> : <Sparkles size={16} className="text-accent-yellow" />,
             action: () => {

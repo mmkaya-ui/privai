@@ -21,8 +21,9 @@ export const ModelSelector = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const availableModels = getAvailableModels(state.apiKeys);
-    const currentModel = AVAILABLE_MODELS.find(m => m.id === state.defaultModelConfig.modelId);
+    const availableModels = getAvailableModels(state.apiKeys, state.discoveredOllamaModels);
+    const currentModel = availableModels.find(m => m.id === state.defaultModelConfig.modelId && m.providerId === state.defaultModelConfig.provider)
+        ?? AVAILABLE_MODELS.find(m => m.id === state.defaultModelConfig.modelId);
     const isCurrentLocal = currentModel?.isLocal;
 
     // Group models
