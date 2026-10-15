@@ -38,7 +38,7 @@ src/
     models.ts         catalog, prices (+ PRICING_SOURCES), estimateCost, formatCost
     crypto.ts         storage.ts
   types/llm.ts        Message, ChatSession, ModelConfig, Attachment, LLMProvider, LLMStreamEvent, LLMErrorCode
-e2e/                  Playwright suite + fixtures      docs/verification/  evidence files
+e2e/                  Playwright: privai.spec.ts (regressions), features.spec.ts, fixtures/      docs/verification/  evidence files
 ```
 
 There is no `src/types/chat.ts`. `next.config.ts` was removed; `next.config.mjs` is the config.
@@ -74,7 +74,7 @@ type LLMErrorCode = 'auth'|'rate_limit'|'network'|'aborted'|'bad_request'|'not_f
 | `npm run test:coverage` | 13 files, 304 tests passed; 91.3% statements · 86.3% branches · 92.6% functions · 91.3% lines (thresholds 90/85/90/90 enforced) |
 | `npm run build` | passes with no access to Google Fonts; `/` static, `/api/proxy` Edge |
 | `npm run bench -- --mock --runs 2` | runs |
-| `npm run test:e2e` | 10 passed. The same file on `9dd3a90`: 7 of 10 failed |
+| `npm run test:e2e` | 16 passed (`privai.spec.ts` 10 + `features.spec.ts` 6). `privai.spec.ts` on `9dd3a90`: 7 of 10 failed |
 | `npm run ci` | exit 0; matches `.github/workflows/ci.yml`, which also runs the end-to-end tests |
 
 ## 5. What changed in this branch (each reproduced by a failing test first)
@@ -125,3 +125,4 @@ type LLMErrorCode = 'auth'|'rate_limit'|'network'|'aborted'|'bad_request'|'not_f
 - Keys at rest are unencrypted. A possible improvement is an optional passphrase-locked vault.
 - No vision (images) and no OCR for scanned PDFs.
 - Real-key smoke tests against each provider (e.g. a manual workflow with secrets).
+- Not automated: WebLLM on a real GPU, theme switching, "clear chat", copy/download buttons.

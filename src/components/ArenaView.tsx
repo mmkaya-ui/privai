@@ -33,7 +33,7 @@ const initialOutputState: ModelOutputState = {
 
 export const ArenaView = () => {
     const { state, dispatch } = useApp();
-    const [modelA, setModelA] = useState<AIModelDefinition>(AVAILABLE_MODELS[0]); // e.g. Llama 3.3 Local
+    const [modelA, setModelA] = useState<AIModelDefinition>(AVAILABLE_MODELS[0]); // first catalog entry: in-browser WebGPU Llama 3.2 1B
     const [modelB, setModelB] = useState<AIModelDefinition>(
         AVAILABLE_MODELS.find(m => m.id === 'deepseek-flash') || AVAILABLE_MODELS[1]
     );

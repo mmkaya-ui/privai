@@ -30,6 +30,18 @@ without using real keys.
 | Ollama "Test Connection" | Installed models appear in the picker after a reload, and the chat goes to `localhost:11434/api/chat` | ✘ | ✓ |
 | works offline after the first visit | With the network disabled, a reload still renders the app from the service worker | ✓ | ✓ |
 
+### Feature suite (`e2e/features.spec.ts`)
+These cover the rest of what the README describes. All of them pass on this branch.
+
+| Test | What it proves |
+| :--- | :--- |
+| Stop before the first token | Pressing Stop shows "Stopped before the model replied."; the next request has one merged user turn and no empty assistant turn |
+| Edit a sent prompt | The edited text is what gets sent; the branch counter shows 2 / 2, and "Previous branch" brings back the original |
+| Arena | Groq and Anthropic stream side by side; cost comes from Anthropic's reported usage (shown as `<$0.0001`) |
+| Command palette | `Ctrl+K` → a chat title opens that chat; "Export Chat to Markdown" downloads `beta-plans.md` with the messages |
+| Code block → Canvas | The iframe has `sandbox="allow-scripts allow-modals"` (no same-origin) and renders the HTML |
+| LM Studio | The request goes to `http://localhost:1234/v1/chat/completions` with `model: local-model`; the UI says "Runs on this device" and "On this device" |
+
 Logs: [`e2e-before-9dd3a90.log`](verification/e2e-before-9dd3a90.log) (original code, same test file)
 and [`e2e-after.log`](verification/e2e-after.log). The only change made to the original checkout for
 the "before" run was stubbing `next/font/google`, because that build fails without access to Google
@@ -79,6 +91,9 @@ longer listed, so they were replaced by `deepseek-flash` and `deepseek-v4-pro`.
 
 ## 4. Not verified
 
+- **WebLLM on a real GPU:** headless Chromium has no WebGPU. `webllm.test.ts` covers the provider
+  against a mocked engine.
+- **Theme switching, "clear chat", copy/download buttons:** not automated.
 - **Real model replies:** these need real API keys. The tests check what is sent, not how a provider
   responds to it.
 - **`deepseek-chat` as an alias:** whether DeepSeek still accepts it needs a valid key.

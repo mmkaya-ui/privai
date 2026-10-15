@@ -5,9 +5,10 @@ Google Gemini, Groq, DeepSeek, any OpenAI-compatible endpoint) or with models on
 (Ollama, LM Studio, in-browser WebGPU). There is no PrivAI backend in the chat path: the tab talks
 to the provider directly, and chats, settings and keys live in the browser's IndexedDB.
 
-Everything this README states is backed by a test or a recorded check. The
-[claims table](#claims-and-how-they-are-verified) lists which one. To re-check it all yourself, run
-`npm run verify`.
+Each claim in this README is backed by an automated test or a dated, recorded check; the
+[claims table](#claims-and-how-they-are-verified) says which. The few things that are *not* covered
+are listed under [Not covered by tests](#not-covered-by-tests). Run `npm run verify` to re-check
+everything.
 
 ---
 
@@ -25,13 +26,31 @@ Everything this README states is backed by a test or a recorded check. The
 | A reply that finishes after you switch chats is saved | `persistence.test.ts` + e2e: *a reply that finishes after switching chats* |
 | Ollama "Test Connection" adds your installed models to the model picker | e2e: *Ollama: 'Test Connection'…* |
 | The app opens offline after the first visit | e2e: *works offline after the first visit* |
+| Stop before the first token shows a notice, and the next request doesn't include it | e2e (features): *Stop before the first token* |
+| Editing a sent prompt sends the new version, and old versions stay switchable | e2e (features): *Edit a sent prompt* |
+| The Arena streams two providers side by side, with cost from reported usage | e2e (features): *Arena streams two providers* |
+| The command palette finds chats by title and exports the current chat to Markdown | e2e (features): *Command palette* |
+| "Open in Canvas" runs HTML in an iframe sandboxed with `allow-scripts allow-modals` only | e2e (features): *Code block* |
+| LM Studio chat goes to `localhost:1234` and is shown as local and free | e2e (features): *LM Studio* |
 | Streams parse correctly however the network splits them | `llm-core.test.ts`, `providers.conformance.test.ts` (each provider split into 1, 2, 3, 7, 64 and 100,000-byte chunks) |
 | `/api/proxy` blocks SSRF and open-relay abuse | `proxy-guard.test.ts` (62 tests), `route.test.ts` (15 tests) |
 | Model prices match the official pages (2026-10-15) | [docs/verification/pricing-2026-10-15.md](docs/verification/pricing-2026-10-15.md); `models.test.ts` requires every source to be marked verified |
 | The production build needs no network access to Google Fonts | `npm run build` in a sandbox that blocks fonts.googleapis.com. The old build failed there: [build-before-9dd3a90.log](docs/verification/build-before-9dd3a90.log) |
 
-Before and after: the same end-to-end suite failed **7 of 10** on commit `9dd3a90`
-([log](docs/verification/e2e-before-9dd3a90.log)) and passes **10 of 10** now ([log](docs/verification/e2e-after.log)).
+Before and after: the regression suite (`e2e/privai.spec.ts`) failed **7 of 10** on commit `9dd3a90`
+([log](docs/verification/e2e-before-9dd3a90.log)). Now it and the feature suite (`e2e/features.spec.ts`)
+pass **16 of 16** ([log](docs/verification/e2e-after.log)).
+
+### Not covered by tests
+- **WebLLM on a real GPU.** Headless Chromium has no WebGPU, so the provider is unit-tested against
+  a mocked engine (streaming, usage, interrupt), but a model has not actually been run in this
+  verification.
+- **Real provider replies.** These need real keys. Tests check the exact request sent, the CORS
+  behaviour (probe) and the parsing of each provider's documented stream format.
+- **Small UI conveniences:** theme switching, the "clear chat" action, and the copy/download
+  buttons.
+- **Chrome Local Network Access prompts** when a page not served from localhost calls
+  Ollama/LM Studio.
 
 ---
 
@@ -261,7 +280,7 @@ npm run dev                  # http://localhost:3000
 | `npm run test:coverage` | Same, with v8 coverage and **enforced** thresholds (90/85/90/90) | 91.3% statements · 86.3% branches · 92.6% functions · 91.3% lines |
 | `npm run lint` / `npm run typecheck` | ESLint / `tsc --noEmit` | clean |
 | `npm run build` | `next build --webpack` (Serwist needs webpack) | `/` static, `/api/proxy` Edge |
-| `npm run test:e2e` | Playwright against `next start` (run `npm run build` first) | 10 passed |
+| `npm run test:e2e` | Playwright against `next start` (run `npm run build` first) | 16 passed |
 | `npm run ci` | lint, typecheck, coverage, build, mock benchmark (same as the GitHub workflow) | exit 0 |
 | `npm run verify` | `ci`, then the end-to-end tests | exit 0 |
 
