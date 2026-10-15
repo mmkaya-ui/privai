@@ -74,7 +74,7 @@ type LLMErrorCode = 'auth'|'rate_limit'|'network'|'aborted'|'bad_request'|'not_f
 | `npm run test:coverage` | 13 files, 304 tests passed; 91.3% statements · 86.3% branches · 92.6% functions · 91.3% lines (thresholds 90/85/90/90 enforced) |
 | `npm run build` | passes with no access to Google Fonts; `/` static, `/api/proxy` Edge |
 | `npm run bench -- --mock --runs 2` | runs |
-| `npm run test:e2e` | 16 passed (`privai.spec.ts` 10 + `features.spec.ts` 6). `privai.spec.ts` on `9dd3a90`: 7 of 10 failed |
+| `npm run test:e2e` | 17 passed (`privai.spec.ts` 10 + `features.spec.ts` 7). `privai.spec.ts` on `9dd3a90`: 7 of 10 failed |
 | `npm run ci` | exit 0; matches `.github/workflows/ci.yml`, which also runs the end-to-end tests |
 
 ## 5. What changed in this branch (each reproduced by a failing test first)
@@ -102,10 +102,13 @@ type LLMErrorCode = 'auth'|'rate_limit'|'network'|'aborted'|'bad_request'|'not_f
 11. **Prices.** All prices were rechecked on the official pages. `deepseek-chat` and
     `deepseek-reasoner` (no longer listed) were replaced by `deepseek-flash` and `deepseek-v4-pro`
     (peak rates), and the moved Anthropic and OpenAI docs URLs were updated.
-12. **Tooling.**
+12. **Command palette.** It cleared its search box 20 ms after opening, erasing anything typed straight
+    after `Ctrl+K` (found by GitHub CI). It is now mounted fresh on each open, with no delayed reset.
+13. **Tooling.**
     - Coverage thresholds are now real (the old handover claimed a 90% assertion that didn't exist).
     - `npm run ci` now matches the workflow.
     - Added `npm run test:e2e` and `npm run verify`.
+    - On CI, Playwright failures show up as PR annotations.
     - `engines.node` is `>=20.16` (required by pdfjs-dist).
 
 ## 6. Watch-outs

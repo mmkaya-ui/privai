@@ -128,10 +128,30 @@ test("Command palette: find a chat by title, export it to Markdown", async ({ pa
 
     await page.keyboard.press("Control+k");
     await box.fill("Export Chat to Markdown");
+    await expect(box).toHaveValue("Export Chat to Markdown");
     const [download] = await Promise.all([page.waitForEvent("download"), box.press("Enter")]);
     expect(download.suggestedFilename()).toBe("beta-plans.md");
     const md = await (await download.createReadStream()).toArray();
     expect(Buffer.concat(md).toString()).toContain("BETA-BODY");
+});
+
+test("Command palette keeps what you type immediately after Ctrl+K", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText("Initializing PrivAI...")).toHaveCount(0);
+    // Open the palette and type in the very next task, i.e. faster than any delayed reset could run.
+    await page.evaluate(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+        let input: HTMLInputElement | null = null;
+        while (!input) {
+            await new Promise(r => setTimeout(r, 0));
+            input = document.querySelector('input[placeholder^="Type a command"]');
+        }
+        const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+        setValue.call(input, "Export");
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.waitForTimeout(300);
+    await expect(page.getByPlaceholder(/Type a command/)).toHaveValue("Export");
 });
 
 test("Code block: 'Open in Canvas' renders HTML in a sandboxed iframe without same-origin access", async ({ page }) => {

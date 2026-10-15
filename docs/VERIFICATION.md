@@ -31,7 +31,7 @@ without using real keys.
 | works offline after the first visit | With the network disabled, a reload still renders the app from the service worker | ✓ | ✓ |
 
 ### Feature suite (`e2e/features.spec.ts`)
-These cover the rest of what the README describes. All of them pass on this branch.
+These cover the rest of what the README describes. All of them pass on this branch (7 tests).
 
 | Test | What it proves |
 | :--- | :--- |
@@ -39,6 +39,7 @@ These cover the rest of what the README describes. All of them pass on this bran
 | Edit a sent prompt | The edited text is what gets sent; the branch counter shows 2 / 2, and "Previous branch" brings back the original |
 | Arena | Groq and Anthropic stream side by side; cost comes from Anthropic's reported usage (shown as `<$0.0001`) |
 | Command palette | `Ctrl+K` → a chat title opens that chat; "Export Chat to Markdown" downloads `beta-plans.md` with the messages |
+| Command palette keeps what you type immediately after Ctrl+K | Text typed straight after opening is kept. This failed 3/3 before the fix, because the palette cleared its box 20 ms after opening; found when GitHub CI's faster typing lost the query |
 | Code block → Canvas | The iframe has `sandbox="allow-scripts allow-modals"` (no same-origin) and renders the HTML |
 | LM Studio | The request goes to `http://localhost:1234/v1/chat/completions` with `model: local-model`; the UI says "Runs on this device" and "On this device" |
 

@@ -29,7 +29,7 @@ everything.
 | Stop before the first token shows a notice, and the next request doesn't include it | e2e (features): *Stop before the first token* |
 | Editing a sent prompt sends the new version, and old versions stay switchable | e2e (features): *Edit a sent prompt* |
 | The Arena streams two providers side by side, with cost from reported usage | e2e (features): *Arena streams two providers* |
-| The command palette finds chats by title and exports the current chat to Markdown | e2e (features): *Command palette* |
+| The command palette finds chats by title and exports the current chat to Markdown, and keeps what you type straight after `Ctrl+K` | e2e (features): *Command palette* (2 tests) |
 | "Open in Canvas" runs HTML in an iframe sandboxed with `allow-scripts allow-modals` only | e2e (features): *Code block* |
 | LM Studio chat goes to `localhost:1234` and is shown as local and free | e2e (features): *LM Studio* |
 | Streams parse correctly however the network splits them | `llm-core.test.ts`, `providers.conformance.test.ts` (each provider split into 1, 2, 3, 7, 64 and 100,000-byte chunks) |
@@ -39,7 +39,7 @@ everything.
 
 Before and after: the regression suite (`e2e/privai.spec.ts`) failed **7 of 10** on commit `9dd3a90`
 ([log](docs/verification/e2e-before-9dd3a90.log)). Now it and the feature suite (`e2e/features.spec.ts`)
-pass **16 of 16** ([log](docs/verification/e2e-after.log)).
+pass **17 of 17** ([log](docs/verification/e2e-after.log)).
 
 ### Not covered by tests
 - **WebLLM on a real GPU.** Headless Chromium has no WebGPU, so the provider is unit-tested against
@@ -280,7 +280,7 @@ npm run dev                  # http://localhost:3000
 | `npm run test:coverage` | Same, with v8 coverage and **enforced** thresholds (90/85/90/90) | 91.3% statements · 86.3% branches · 92.6% functions · 91.3% lines |
 | `npm run lint` / `npm run typecheck` | ESLint / `tsc --noEmit` | clean |
 | `npm run build` | `next build --webpack` (Serwist needs webpack) | `/` static, `/api/proxy` Edge |
-| `npm run test:e2e` | Playwright against `next start` (run `npm run build` first) | 16 passed |
+| `npm run test:e2e` | Playwright against `next start` (run `npm run build` first) | 17 passed |
 | `npm run ci` | lint, typecheck, coverage, build, mock benchmark (same as the GitHub workflow) | exit 0 |
 | `npm run verify` | `ci`, then the end-to-end tests | exit 0 |
 
