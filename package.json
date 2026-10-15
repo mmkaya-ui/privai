@@ -28,14 +28,20 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^3.2.7",
     "autoprefixer": "^10.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.30",
     "tailwindcss": "^3.4.19",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

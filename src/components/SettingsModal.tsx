@@ -21,7 +21,7 @@ import {
     ExternalLink
 } from 'lucide-react';
 import { checkOllamaConnection } from '@/services/ollama';
-import { encryptData, decryptData, EncryptedPrivAIPayload } from '@/services/crypto';
+import { encryptData, decryptData, EncryptedPrivAIPayload, MIN_PASSPHRASE_LENGTH } from '@/services/crypto';
 import { storage } from '@/services/storage';
 
 export const SettingsModal = () => {
@@ -95,8 +95,8 @@ export const SettingsModal = () => {
 
     // Export AES-256-GCM Encrypted Backup
     const handleExportBackup = async () => {
-        if (!exportPassphrase || exportPassphrase.length < 4) {
-            setBackupStatus({ ok: false, message: 'Passphrase must be at least 4 characters long.' });
+        if (!exportPassphrase || exportPassphrase.length < MIN_PASSPHRASE_LENGTH) {
+            setBackupStatus({ ok: false, message: `Passphrase must be at least ${MIN_PASSPHRASE_LENGTH} characters long.` });
             return;
         }
 
