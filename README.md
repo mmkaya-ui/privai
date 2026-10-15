@@ -1,293 +1,218 @@
-# PrivAI — Client-Side AI Workspace
+# PrivAI
 
-PrivAI is a browser app for chatting with cloud models using your own API keys (OpenAI, Anthropic,
-Google Gemini, Groq, DeepSeek, any OpenAI-compatible endpoint) or with models on your own machine
-(Ollama, LM Studio, in-browser WebGPU). There is no PrivAI backend in the chat path: the tab talks
-to the provider directly, and chats, settings and keys live in the browser's IndexedDB.
+PrivAI is a chat app that runs in your browser. Bring your own API key for OpenAI, Anthropic,
+Gemini, Groq or DeepSeek, or use models on your own machine through Ollama, LM Studio or WebGPU.
+Requests go straight from the browser tab to the model you pick. There is no PrivAI server in
+between and no account to create.
 
-Each claim in this README is backed by an automated test or a dated, recorded check; the
-[claims table](#claims-and-how-they-are-verified) says which. The few things that are *not* covered
-are listed under [Not covered by tests](#not-covered-by-tests). Run `npm run verify` to re-check
-everything.
+![A chat with a PDF and an image attached](docs/screenshots/chat-attachments.png)
 
----
+<sub>Text from the PDF was extracted in the browser and the matching excerpt was added to the
+prompt. The image was not sent, and the chat says so. Provider replies in both screenshots are
+mocked; regenerate them with `npm run screenshots`.</sub>
 
-## Claims and how they are verified
+## What you get
 
-| Claim | Verified by |
-| :--- | :--- |
-| The app contacts only its own origin and the provider you picked: no analytics, fonts or CDNs | e2e: *no analytics or third-party requests* |
-| All five cloud providers accept direct browser calls, so no proxy is needed | Browser probe, [docs/verification/cors-probe-2026-10-15.json](docs/verification/cors-probe-2026-10-15.json) |
-| API keys and chats are stored **unencrypted** in IndexedDB, and the UI says so | e2e: *privacy copy matches what is actually stored and sent* |
-| `.privai` backups are AES-256-GCM / PBKDF2-SHA256 (600k iterations) and round-trip | `crypto.test.ts` (22 tests) + e2e: *encrypted .privai backup round-trips* |
-| Text from real PDFs (compressed streams) and DOCX files reaches the prompt | `attachments.test.ts` + e2e: *PDF attachment*, *DOCX attachment* |
-| Images are not sent, and the user is told so | e2e: *image attachment* |
-| Failed or empty replies are not sent back to the model | `history.test.ts` + e2e: *failed / empty assistant turns* |
-| A reply that finishes after you switch chats is saved | `persistence.test.ts` + e2e: *a reply that finishes after switching chats* |
-| Ollama "Test Connection" adds your installed models to the model picker | e2e: *Ollama: 'Test Connection'…* |
-| The app opens offline after the first visit | e2e: *works offline after the first visit* |
-| Stop before the first token shows a notice, and the next request doesn't include it | e2e (features): *Stop before the first token* |
-| Editing a sent prompt sends the new version, and old versions stay switchable | e2e (features): *Edit a sent prompt* |
-| The Arena streams two providers side by side, with cost from reported usage | e2e (features): *Arena streams two providers* |
-| The command palette finds chats by title and exports the current chat to Markdown, and keeps what you type straight after `Ctrl+K` | e2e (features): *Command palette* (2 tests) |
-| "Open in Canvas" runs HTML in an iframe sandboxed with `allow-scripts allow-modals` only | e2e (features): *Code block* |
-| LM Studio chat goes to `localhost:1234` and is shown as local and free | e2e (features): *LM Studio* |
-| Streams parse correctly however the network splits them | `llm-core.test.ts`, `providers.conformance.test.ts` (each provider split into 1, 2, 3, 7, 64 and 100,000-byte chunks) |
-| `/api/proxy` blocks SSRF and open-relay abuse | `proxy-guard.test.ts` (62 tests), `route.test.ts` (15 tests) |
-| Model prices match the official pages (2026-10-15) | [docs/verification/pricing-2026-10-15.md](docs/verification/pricing-2026-10-15.md); `models.test.ts` requires every source to be marked verified |
-| The production build needs no network access to Google Fonts | `npm run build` in a sandbox that blocks fonts.googleapis.com. The old build failed there: [build-before-9dd3a90.log](docs/verification/build-before-9dd3a90.log) |
+- Nine backends behind one interface: OpenAI, Anthropic, Gemini, Groq, DeepSeek, any
+  OpenAI-compatible URL, Ollama, LM Studio, and WebLLM (Llama 3.2 1B or Gemma 2 2B running on
+  WebGPU in the tab).
+- Questions about your own files. PDF (via pdf.js), DOCX and text/code files are read in the
+  tab, and the most relevant excerpts are added to your prompt.
+- Token count, speed and cost under every reply, using the usage numbers the provider reports.
+- An Arena that streams one prompt to two models side by side, plus a CLI benchmark.
+- Prompt editing with branches, a `Ctrl/⌘+K` command palette, Markdown export, and a sandboxed
+  preview for HTML, JS and SVG code blocks.
+- Encrypted `.privai` backups for moving your chats and settings to another machine.
+- After the first visit the app also loads without an internet connection, which is useful with
+  local models.
 
-Before and after: the regression suite (`e2e/privai.spec.ts`) failed **7 of 10** on commit `9dd3a90`
-([log](docs/verification/e2e-before-9dd3a90.log)). Now it and the feature suite (`e2e/features.spec.ts`)
-pass **17 of 17** ([log](docs/verification/e2e-after.log)).
+![Arena: two models answering the same prompt](docs/screenshots/arena.png)
 
-### Not covered by tests
-- **WebLLM on a real GPU.** Headless Chromium has no WebGPU, so the provider is unit-tested against
-  a mocked engine (streaming, usage, interrupt), but a model has not actually been run in this
-  verification.
-- **Real provider replies.** These need real keys. Tests check the exact request sent, the CORS
-  behaviour (probe) and the parsing of each provider's documented stream format.
-- **Small UI conveniences:** theme switching, the "clear chat" action, and the copy/download
-  buttons.
-- **Chrome Local Network Access prompts** when a page not served from localhost calls
-  Ollama/LM Studio.
+## Where your data goes
 
----
-
-## Architecture
-
-```mermaid
-flowchart TD
-    subgraph Tab ["Browser tab (your machine)"]
-        UI["PrivAI UI (Next.js 16 static page + service worker)"]
-        IDB[("IndexedDB 'privai-db'\nchats, settings, API keys\n(unencrypted)")]
-        Extract["Attachment text extraction\n(pdf.js, DOCX unzip, text)"]
-        Rank["TF-IDF ranking (in memory)"]
-        Crypto["Web Crypto\n(.privai backups only)"]
-        UI <--> IDB
-        UI --> Extract --> Rank --> UI
-        UI <--> Crypto
-    end
-
-    UI -->|HTTPS, your key| Cloud["OpenAI · Anthropic · Gemini · Groq · DeepSeek\n(direct, no proxy)"]
-    UI -->|http://localhost| Local["Ollama :11434 · LM Studio :1234"]
-    UI -->|WebGPU in tab| WebLLM["WebLLM (weights downloaded once from Hugging Face)"]
-
-    Proxy["/api/proxy (optional Edge route)\nnot used by the app; kept for custom gateways"]
-```
-
-- **Direct calls.** Every built-in provider is called straight from the tab. A browser probe on
-  2026-10-15 confirmed that Groq, DeepSeek, OpenAI, Anthropic and Gemini all let a page read their
-  responses cross-origin. Re-run [`scripts/cors-probe.browser.js`](scripts/cors-probe.browser.js) in
-  any browser console to check again.
-- **`/api/proxy`** is a hardened pass-through for gateways that do *not* send CORS headers. The app
-  never calls it on its own, and it only works when PrivAI is deployed with a server (it is an Edge
-  route, so a purely static export does not include it).
-
----
-
-## What is stored, and where
-
-| Data | Where | Encrypted? |
+| Data | Where it lives | Encrypted |
 | :--- | :--- | :--- |
-| Chats (messages, edit variants, token telemetry) | IndexedDB `privai-db` → `sessions` | No |
-| API keys, base URLs, theme, selected model, discovered Ollama models | IndexedDB `privai-db` → `settings` | No |
-| Attached files | Not stored. Text is extracted in memory for one request; only the file name and status are saved with the message | — |
-| `.privai` backup file (your download) | Wherever you save it | Yes: AES-256-GCM |
-| Anything on a PrivAI server | Nothing. There is no database, and the proxy does not log or store payloads | — |
+| Chats, edit history, per-message usage | This browser's IndexedDB (`privai-db`) | No |
+| API keys, base URLs, settings | Same database | No |
+| Attached files | Nowhere. Text is extracted in memory for one message; only the file name is kept | – |
+| `.privai` backup | Wherever you save the file | Yes, AES-256-GCM |
 
-Anyone or anything that can read this browser profile (malware, an extension with broad
-permissions, another person on the machine) can read your keys and chats. Use a dedicated browser
-profile and the encrypted backup when moving data.
+When you chat with a cloud model, your messages and any attachment excerpts go to that provider
+and nowhere else. A test loads the app, attaches a PDF and sends a message, and checks that the
+only hosts contacted are the app itself and the provider. There is no analytics code and no
+font or CDN request.
 
-### Encrypted backups (`.privai`)
-- **Cipher and key:** AES-256-GCM. The key is derived from your passphrase with
-  PBKDF2-HMAC-SHA256 (600,000 iterations), using a random 16-byte salt and a random 12-byte IV for
-  each export.
-- **Tamper protection:** the format, version and iteration count are bound in as additional
-  authenticated data, so changing the header (for example, lowering the iteration count) makes
-  decryption fail.
-- **Limits:** minimum passphrase length is 8 characters. Files from an older format (v1, 100k
-  iterations) still decrypt.
+The one thing to be aware of: keys and chats are stored unencrypted in the browser. Anything that
+can read your browser profile, such as malware or an extension with broad permissions, can read
+them. A separate browser profile for PrivAI is a reasonable precaution.
 
----
+## Getting started
 
-## Threat model of `/api/proxy`
-
-It protects against:
-1. **SSRF.** Production targets must be `https://` on port 443 and on the host allowlist
-   (`api.openai.com`, `api.anthropic.com`, `api.deepseek.com`, `api.groq.com`,
-   `generativelanguage.googleapis.com`, `openrouter.ai`, plus their subdomains), matched on the
-   parsed hostname. IP literals, credentials in the URL, loopback, private, link-local,
-   cloud-metadata, CGNAT, multicast and IPv4-mapped / NAT64 forms of those are rejected. Loopback
-   and private targets are allowed only when `NODE_ENV` is not `production`, so local Ollama works
-   in `next dev`.
-2. **Open relay.** The `Origin` header must equal the app's own origin, or one listed in
-   `PRIVAI_ALLOWED_ORIGINS`. A missing `Origin` is rejected in production.
-3. **Header leaks.** Request headers are allowlisted: `content-type`, `authorization`, `x-api-key`,
-   `x-goog-api-key`, the `anthropic-*` headers, OpenAI org/project headers and OpenRouter
-   attribution. Cookies, hop-by-hop headers and `x-forwarded-*` are never forwarded. On the way back,
-   upstream `set-cookie`, `location` and CORS headers are stripped.
-4. **Oversized bodies.** Bodies are capped at 1 MiB (`MAX_BODY_BYTES`). A declared length over the
-   cap gets a 413 immediately, and chunked bodies are counted as they stream.
-5. **Redirects.** `redirect: "manual"`, and any 3xx response becomes a 502.
-
-It does not protect against: the provider seeing your prompt and key (that is the point of the
-call), a compromised browser or machine, or your host seeing which upstream hosts you contact.
-
----
-
-## Attachments and document retrieval
-
-```
-file ──► text extraction in the tab ──► 600-char chunks (120 overlap) ──► TF-IDF + cosine ranking ──► top 4 excerpts added to the prompt
-```
-
-| File type | What happens |
-| :--- | :--- |
-| `.txt .md .csv .json`, code, and anything else that decodes as text | Read as UTF-8 |
-| PDF with a text layer | Text extracted with pdf.js (`pdfjs-dist`, worker bundled, eval disabled) |
-| DOCX | `word/document.xml` unzipped with `fflate`; paragraphs, tabs and breaks kept |
-| Images, scanned PDFs, `.xlsx/.pptx/.doc`, other binaries | **Not sent.** The message shows the file as "not sent" with the reason |
-
-- **What leaves the tab:** the whole file never leaves it. The selected excerpts do: they are part
-  of the request to whichever model you are using, so a cloud provider sees them.
-- **When nothing matches:** if the question shares no terms with the documents ("summarize this"),
-  the opening chunks of each file are sent instead, so the model still sees the document.
-- **No embeddings, no vector store:** there is no embedding model and no stored index. Everything
-  is rebuilt in memory for each message.
-
----
-
-## Model prices (checked 2026-10-15)
-
-USD per 1M tokens, standard tier, without caching. Each figure was compared with the official page
-on that date ([evidence](docs/verification/pricing-2026-10-15.md)). They are used for the per-message
-cost shown in the UI.
-
-| Provider | Model ID | Input | Output | Source |
-| :--- | :--- | ---: | ---: | :--- |
-| Anthropic | `claude-opus-5-5` | 4.00 | 20.00 | [platform.claude.com](https://platform.claude.com/docs/en/about-claude/pricing) |
-| Anthropic | `claude-sonnet-5-5` | 2.00 | 10.00 | 〃 |
-| Anthropic | `claude-haiku-5-5` | 0.10 | 0.50 | 〃 (prompts ≤ 100K tokens) |
-| OpenAI | `gpt-6-astra` | 10.00 | 50.00 | [developers.openai.com](https://developers.openai.com/api/docs/pricing) (short context) |
-| OpenAI | `gpt-6.1-sol` | 2.00 | 10.00 | 〃 |
-| OpenAI | `gpt-6-luna` | 0.10 | 0.50 | 〃 |
-| Google | `gemini-3.8-flash` | 0.75 | 3.75 | [ai.google.dev](https://ai.google.dev/gemini-api/docs/pricing) (until 2026-12-31; then 1.50 / 7.50) |
-| Google | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 〃 |
-| Google | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 〃 (prompts ≤ 200K tokens) |
-| Groq | `openai/gpt-oss-20b` | 0.075 | 0.30 | [console.groq.com](https://console.groq.com/docs/models) |
-| Groq | `openai/gpt-oss-120b` | 0.15 | 0.60 | 〃 |
-| DeepSeek | `deepseek-flash` | 0.30 | 1.20 | [api-docs.deepseek.com](https://api-docs.deepseek.com/quick_start/pricing) (peak; off-peak is half) |
-| DeepSeek | `deepseek-v4-pro` | 1.32 | 3.96 | 〃 |
-| Local | Ollama / LM Studio / WebLLM | 0 | 0 | your hardware |
-
-- **Where the cost figure comes from:** each message's cost uses the token counts the provider
-  reports. When a provider doesn't report them, characters ÷ 4 is used and the cost is marked
-  "(est.)".
-- **DeepSeek:** the cost shown uses the peak rate, so it is an upper bound.
-- **Training on your data:** each provider's terms govern this. For example, Google's pricing page
-  says free-tier Gemini content is used to improve its products, and paid-tier content is not.
-
----
-
-## Benchmark CLI and Arena
+Requires Node 20.16 or newer.
 
 ```bash
-npm run bench -- --mock --runs 2                         # synthetic streams, no keys or network (runs in CI)
-npm run bench -- --modelA ollama:llama3.2 --modelB groq:openai/gpt-oss-20b --runs 3
-npm run bench -- --modelA anthropic:claude-sonnet-5-5 --modelB deepseek:deepseek-flash --runs 3
+git clone https://github.com/mmkaya-ui/privai.git
+cd privai
+npm install
+npm run dev
 ```
 
-- **What it reports:** time to first token (p50/p90), total latency (p50/p90), output tokens per
-  second, output tokens, cost, and where the token counts came from. Results print as a markdown
-  table and are saved as JSON in `benchmarks/results/`.
-- **The sample result file:** `benchmarks/results/local-ollama-sample.json` is one run recorded on
-  the author's machine. It is an example of the output format, not a reproducible measurement.
-- **Arena (`Ctrl/⌘+K` → Switch to Battle Arena):** streams the same prompt to two models side by
-  side, with the same metrics.
+Open http://localhost:3000, click **Start New Chat**, then pick a model from the menu at the top.
+Cloud models appear once you add a key under Settings → Cloud API Keys.
 
----
+### Ollama
 
-## Features
+1. Install [Ollama](https://ollama.com) and pull a model, for example `ollama pull llama3.2`.
+2. If you serve PrivAI from anywhere other than `localhost`, allow that origin:
+   `OLLAMA_ORIGINS="https://your-privai-host" ollama serve`.
+3. In PrivAI, open Settings → Local LLMs and click **Test Connection**. Your installed models are
+   added to the model menu under "Local Machine (Ollama)" and stay there after a reload.
 
-- **Providers:** OpenAI, Anthropic, Gemini, Groq, DeepSeek, a custom OpenAI-compatible URL, Ollama,
-  LM Studio and WebLLM, all behind one `LLMProvider` interface ([`src/types/llm.ts`](src/types/llm.ts)).
-  - Each provider is an async generator: `stream(messages, config, apiKey, signal)` yields
-    `{type:'token'}` and `{type:'usage'}` events.
-  - Errors are normalized to an `LLMError` with `code` set to `auth`, `rate_limit`, `network`,
-    `aborted`, `bad_request`, `not_found`, `server`, `unsupported` or `unknown`, plus `status`,
-    `retryable` and `retryAfterMs`.
-- **Ollama / LM Studio:** Settings → Local LLMs → **Test Connection** lists the models installed in
-  Ollama and adds them to the model picker (the list is remembered).
-- **WebLLM:** Llama 3.2 1B and Gemma 2 2B run in the tab on WebGPU. Weights are downloaded once
-  from Hugging Face and cached by the browser. Stop interrupts generation on the GPU.
-- **Command palette (`Ctrl/⌘+K`):** switch models, jump to chats by title, new chat, export the
-  current chat to Markdown, clear the current chat, open settings, switch theme
-  (dark / OLED / light), and toggle the Arena. It searches chat titles, not message text.
-- **Edit and branch:** edit a sent prompt to create a new version. Earlier versions stay
-  switchable.
-- **Code blocks:** Prism highlighting and copy/download. HTML, JS and SVG can run in a sandboxed
-  iframe (`sandbox="allow-scripts allow-modals"`, no same-origin access).
-- **Offline:** a service worker (Serwist) precaches the app after the first online visit. Local
-  models keep working offline.
+### LM Studio
 
----
+Start LM Studio's local server (port 1234) with CORS enabled, then choose
+"LM Studio (Active Model)" in the model menu. The default base URL is `http://localhost:1234/v1`.
+
+### WebLLM
+
+Pick one of the in-browser models. The first run downloads the weights from Hugging Face; after
+that the browser caches them. This needs a browser with WebGPU support.
+
+## Attachments
+
+Each file is turned into text in the tab, split into 600-character chunks (with 120 characters of
+overlap), and ranked against your question with TF-IDF. The top four chunks are added to the
+prompt. If nothing matches, for example "summarize this", the opening of each file is used instead.
+
+| File | What happens |
+| :--- | :--- |
+| Text, Markdown, CSV, JSON, code | Read as UTF-8 |
+| PDF with a text layer | Text extracted with pdf.js (bundled; nothing loaded from a CDN) |
+| DOCX | Paragraph text read from the document |
+| Images, scanned PDFs, XLSX, PPTX, other binaries | Not sent; the message shows "not sent" and why |
+
+Ranking is by keywords, not meaning, so a question worded very differently from the document can
+miss the right passage.
+
+## Costs
+
+Costs are calculated from the token counts the provider returns and the list prices below. If a
+provider doesn't return counts, PrivAI estimates them (characters ÷ 4) and marks the cost
+"(est.)". Local models cost nothing.
+
+Prices in USD per million tokens, standard tier, without caching. Checked against each provider's
+pricing page on 2026-10-15 ([record](docs/verification/pricing-2026-10-15.md)).
+
+| Provider | Model | Input | Output | Notes |
+| :--- | :--- | ---: | ---: | :--- |
+| Anthropic | `claude-opus-5-5` | 4.00 | 20.00 | |
+| Anthropic | `claude-sonnet-5-5` | 2.00 | 10.00 | |
+| Anthropic | `claude-haiku-5-5` | 0.10 | 0.50 | prompts up to 100K tokens |
+| OpenAI | `gpt-6-astra` | 10.00 | 50.00 | short context |
+| OpenAI | `gpt-6.1-sol` | 2.00 | 10.00 | short context |
+| OpenAI | `gpt-6-luna` | 0.10 | 0.50 | short context |
+| Google | `gemini-3.8-flash` | 0.75 | 3.75 | rises to 1.50 / 7.50 on 2027-01-01 |
+| Google | `gemini-3.1-flash-lite` | 0.25 | 1.50 | |
+| Google | `gemini-3.1-pro-preview` | 2.00 | 12.00 | prompts up to 200K tokens |
+| Groq | `openai/gpt-oss-20b` | 0.075 | 0.30 | |
+| Groq | `openai/gpt-oss-120b` | 0.15 | 0.60 | |
+| DeepSeek | `deepseek-flash` | 0.30 | 1.20 | peak rate; off-peak is half |
+| DeepSeek | `deepseek-v4-pro` | 1.32 | 3.96 | peak rate; off-peak is half |
+
+Sources: [Anthropic](https://platform.claude.com/docs/en/about-claude/pricing),
+[OpenAI](https://developers.openai.com/api/docs/pricing),
+[Google](https://ai.google.dev/gemini-api/docs/pricing),
+[Groq](https://console.groq.com/docs/models),
+[DeepSeek](https://api-docs.deepseek.com/quick_start/pricing).
+
+## Arena and benchmark
+
+The Arena (the **Battle Arena** button, or `Ctrl/⌘+K` → "Switch to Battle Arena") sends one prompt
+to two models at once and shows tokens, time to first token, speed and cost for each.
+
+The benchmark does the same from the command line, several times per prompt, and reports medians
+and p90s:
+
+```bash
+# keys come from OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY
+npm run bench -- --a ollama:llama3.2 --b groq:openai/gpt-oss-20b --runs 3
+npm run bench -- --a anthropic:claude-haiku-5-5 --b deepseek:deepseek-flash --runs 5
+npm run bench -- --mock --runs 2   # simulated streams for the default pair; used in CI
+```
+
+Results are printed as a table and saved to `benchmarks/results/`.
+`benchmarks/results/local-ollama-sample.json` is a single run from the author's machine, included
+as an example of the output.
+
+## Encrypted backups
+
+Settings → Encrypted Backups exports everything to a `.privai` file. It is encrypted with
+AES-256-GCM, using a key derived from your passphrase with PBKDF2-SHA256 (600,000 iterations, a
+fresh random salt and IV each time). The format version and iteration count are authenticated
+too, so a tampered header fails to decrypt. Passphrases must be at least 8 characters. Importing
+the file on another machine restores your chats, API keys and base URLs.
+
+## The optional `/api/proxy` route
+
+Every built-in provider accepts requests directly from a browser (checked on 2026-10-15 with
+[`scripts/cors-probe.browser.js`](scripts/cors-probe.browser.js)), so the app never uses a proxy.
+The repo still ships one, for OpenAI-compatible gateways that don't send CORS headers. It runs
+wherever Next.js server routes run, and it is locked down:
+
+- It only forwards to an allowlist of provider hosts over HTTPS. IP addresses, private and
+  loopback ranges, and cloud metadata addresses are refused in production.
+- It only accepts requests from the app's own origin (plus any in `PRIVAI_ALLOWED_ORIGINS`).
+- Only a fixed set of headers is forwarded. Cookies never leave, and upstream cookies and
+  redirects never come back.
+- Request bodies are capped at 1 MiB. Nothing is logged or stored.
 
 ## Limitations
 
-1. **Keys and chats are not encrypted at rest.** See [What is stored](#what-is-stored-and-where).
-2. **No vision.** Images are not sent to any model.
-3. **No OCR.** Scanned PDFs are reported as having no text layer.
-4. **Retrieval quality.** Ranking is keyword-based (TF-IDF), not semantic, so paraphrased questions
-   can miss the right passage.
-5. **Large files.** Extraction runs in the tab, so very large PDFs use a lot of memory.
-6. **WebGPU required for WebLLM.** It needs a WebGPU-capable browser and enough GPU memory, and the
-   first use downloads the weights.
-7. **No sync.** Move data between machines with the encrypted `.privai` export/import.
+- API keys and chats are not encrypted at rest (see above).
+- No image input, and no OCR for scanned PDFs.
+- Retrieval is keyword-based, not semantic.
+- Very large PDFs are processed in the tab and can use a lot of memory.
+- No sync between devices; use the encrypted backup.
 
----
+## How it's tested
 
-## Local LLM setup
+Every statement in this README is covered by an automated test or a recorded, dated check. The
+end-to-end tests run the production build in Chromium with provider APIs mocked, so they can check
+exactly what the app sends and stores without real keys.
 
-**Ollama**
-1. Install Ollama from [ollama.com](https://ollama.com), then pull a model: `ollama pull llama3.2`.
-2. If PrivAI is served from anywhere other than `localhost`, allow its origin. For example
-   `OLLAMA_ORIGINS="https://your-privai-host" ollama serve` (or `*`, which allows any site to use
-   your Ollama).
-3. In PrivAI, go to Settings → Local LLMs → **Test Connection**. Your installed models then appear
-   under *Local* in the model picker.
+| Statement | Checked by |
+| :--- | :--- |
+| Only the app and the chosen provider are contacted | e2e `privai.spec.ts`: no analytics or third-party requests |
+| Keys are stored unencrypted, and the UI doesn't claim otherwise | e2e: privacy copy matches what is stored and sent |
+| PDF and DOCX text reaches the prompt; images are refused visibly | `attachments.test.ts` (real files) + three e2e tests |
+| Failed or stopped replies aren't sent back to the model | `history.test.ts` + two e2e tests |
+| A reply that finishes after you switch chats is saved | `persistence.test.ts` + e2e |
+| Ollama models appear in the menu after Test Connection; LM Studio requests go to port 1234 | two e2e tests |
+| Prompt editing, the Arena, the command palette, Markdown export, the code sandbox | e2e `features.spec.ts` |
+| Offline use after the first visit | e2e |
+| Backups round-trip and are encrypted as described | `crypto.test.ts` + e2e |
+| Streams parse correctly however the network splits them | `llm-core.test.ts`, `providers.conformance.test.ts` |
+| The proxy rejects SSRF and cross-origin use | `proxy-guard.test.ts`, `route.test.ts` |
+| Direct browser calls work for all five cloud providers | [CORS probe record](docs/verification/cors-probe-2026-10-15.json) |
+| Prices match the providers' pages | [pricing record](docs/verification/pricing-2026-10-15.md) |
 
-**LM Studio**
-1. Start the local server (`http://localhost:1234`) and enable CORS in its server settings.
-2. Use `http://localhost:1234/v1` as the LM Studio base URL in Settings.
+Not covered: running a WebLLM model on a real GPU (headless Chromium has no WebGPU, so it's
+tested against a mocked engine), real provider replies (they need keys), theme switching, the
+"clear chat" action, and the copy and download buttons.
 
----
+The end-to-end suite was written to reproduce bugs in the previous version: 7 of its 10 regression
+tests fail on commit `9dd3a90` and all pass now
+([before](docs/verification/e2e-before-9dd3a90.log), [after](docs/verification/e2e-after.log)).
 
-## Development and verification
-
-Requires Node 20.16+ (CI uses Node 22).
-
-```bash
-git clone https://github.com/mmkaya-ui/privai.git && cd privai
-npm install
-npm run dev                  # http://localhost:3000
-```
-
-| Command | What it runs | Result on this branch |
+| Command | What it does | Current result |
 | :--- | :--- | :--- |
-| `npm test` | Vitest unit tests | 13 files, 304 tests passed |
-| `npm run test:coverage` | Same, with v8 coverage and **enforced** thresholds (90/85/90/90) | 91.3% statements · 86.3% branches · 92.6% functions · 91.3% lines |
-| `npm run lint` / `npm run typecheck` | ESLint / `tsc --noEmit` | clean |
-| `npm run build` | `next build --webpack` (Serwist needs webpack) | `/` static, `/api/proxy` Edge |
-| `npm run test:e2e` | Playwright against `next start` (run `npm run build` first) | 17 passed |
-| `npm run ci` | lint, typecheck, coverage, build, mock benchmark (same as the GitHub workflow) | exit 0 |
-| `npm run verify` | `ci`, then the end-to-end tests | exit 0 |
+| `npm test` | Unit tests (Vitest) | 304 passing |
+| `npm run test:coverage` | Unit tests with coverage; fails below 90% statements, 85% branches | 91.3% statements, 86.3% branches |
+| `npm run test:e2e` | End-to-end tests; run `npm run build` first | 17 passing |
+| `npm run ci` | Lint, typecheck, coverage, build, mock benchmark | passing |
+| `npm run verify` | `ci` plus the end-to-end tests | passing |
 
-- **Coverage scope:** coverage counts the logic layer: `src/services`, the proxy guard and route,
-  persistence and ErrorBoundary. The React UI, store and IndexedDB storage are covered by the
-  Playwright suite instead.
-- **Before running the end-to-end tests:** `npx playwright install chromium` once, or set
-  `PW_CHROMIUM_PATH` to an existing Chromium.
-
-How each check was produced, and how to reproduce it, is in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+GitHub Actions runs all of the above on every pull request and push to `main`. For the end-to-end
+tests, run `npx playwright install chromium` once, or point `PW_CHROMIUM_PATH` at an existing
+Chromium. Details on each check are in [docs/VERIFICATION.md](docs/VERIFICATION.md); architecture
+notes for contributors are in [docs/HANDOVER.md](docs/HANDOVER.md).
