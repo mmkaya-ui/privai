@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "screenshots": "playwright test -c playwright.screenshots.config.ts",
     "bench": "tsx scripts/benchmark.ts",
     "ci": "npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run bench -- --mock --runs 2",
     "verify": "npm run ci && npm run test:e2e"
