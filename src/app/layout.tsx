@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+// Self-hosted from npm: the build makes no request to Google Fonts and the app loads no third-party font.
+import "@fontsource-variable/inter";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "PrivAI - Multi-Model AI Chat",
@@ -26,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <ErrorBoundary>
           <Providers>{children}</Providers>
         </ErrorBoundary>

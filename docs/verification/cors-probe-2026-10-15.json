@@ -1,0 +1,14 @@
+{
+  "what": "Cross-origin POST from a real browser page to each cloud provider, using the same headers PrivAI sends and a deliberately invalid key. corsReadable=true means the browser let the page read the response, i.e. the provider allows direct browser calls and no proxy is needed.",
+  "date": "2026-10-15",
+  "origin": "https://example.com",
+  "userAgent": "Chrome/152.0.7977.130 (Claude desktop browser pane, Windows 10 x64)",
+  "script": "scripts/cors-probe.browser.js",
+  "results": {
+    "groq":      { "corsReadable": true, "status": 401, "body": "Invalid API Key" },
+    "deepseek":  { "corsReadable": true, "status": 401, "body": "Authentication Fails, Your api key ... is invalid" },
+    "openai":    { "corsReadable": true, "status": 401, "body": "Incorrect API key provided" },
+    "anthropic": { "corsReadable": true, "status": 401, "body": "authentication_error: invalid x-api-key" },
+    "gemini":    { "corsReadable": true, "status": 400, "body": "API key not valid. Please pass a valid API key. (INVALID_ARGUMENT)" }
+  }
+}

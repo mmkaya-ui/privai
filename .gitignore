@@ -50,3 +50,7 @@ public/worker-*.js
 benchmarks/results/*.json
 !benchmarks/results/local-ollama-sample.json
 
+
+# playwright
+/test-results/
+/playwright-report/

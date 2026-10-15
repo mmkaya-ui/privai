@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { AVAILABLE_MODELS, createModelConfig } from '@/services/models';
 import {
@@ -28,24 +28,19 @@ interface PaletteItem {
     action: () => void;
 }
 
+/**
+ * Mounted only while open, so every open starts with an empty query. (An earlier version cleared the
+ * query 20 ms after opening, which erased anything typed straight after Ctrl+K.)
+ */
 export const CommandPalette = () => {
+    const { state } = useApp();
+    return state.isCommandPaletteOpen ? <CommandPaletteDialog /> : null;
+};
+
+const CommandPaletteDialog = () => {
     const { state, dispatch } = useApp();
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (state.isCommandPaletteOpen) {
-            const timer = setTimeout(() => {
-                setQuery('');
-                setSelectedIndex(0);
-                inputRef.current?.focus();
-            }, 20);
-            return () => clearTimeout(timer);
-        }
-    }, [state.isCommandPaletteOpen]);
-
-    if (!state.isCommandPaletteOpen) return null;
 
     const currentSession = state.sessions.find(s => s.id === state.currentSessionId);
 
@@ -57,7 +52,7 @@ export const CommandPalette = () => {
         items.push({
             id: `model-${m.id}`,
             title: m.name,
-            subtitle: m.isLocal ? 'Local Zero-Telemetry' : m.description,
+            subtitle: m.isLocal ? 'Runs on this device' : m.description,
             category: 'Models',
             icon: m.isLocal ? <Cpu size={16} className="text-green-400" /> : <Sparkles size={16} className="text-accent-yellow" />,
             action: () => {
@@ -231,7 +226,7 @@ export const CommandPalette = () => {
                 <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-bg-surface">
                     <Search size={18} className="text-primary shrink-0" />
                     <input
-                        ref={inputRef}
+                        autoFocus
                         type="text"
                         placeholder="Type a command, switch model, or search chats..."
                         value={query}

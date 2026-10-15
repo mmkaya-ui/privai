@@ -17,6 +17,7 @@ import {
     FileText
 } from 'lucide-react';
 import { CodeBlock } from './CodeBlock';
+import { formatCost } from '@/services/models';
 
 interface MessageBubbleProps {
     message: Message;
@@ -141,8 +142,12 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                         {message.attachments && message.attachments.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-3">
                                 {message.attachments.map((att, i) => (
-                                    <div key={i} className="text-xs bg-white/10 px-3 py-1.5 rounded-lg border border-white/5 flex items-center gap-1.5">
-                                        📎 {att.name}
+                                    <div
+                                        key={i}
+                                        className={`text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${att.status === 'skipped' ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-white/10 border-white/5'}`}
+                                        title={att.note}
+                                    >
+                                        📎 {att.name}{att.note ? ` — ${att.note}` : ''}
                                     </div>
                                 ))}
                             </div>
@@ -170,7 +175,7 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                                     className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20"
                                 >
                                     <FileText size={12} />
-                                    <span>{message.sources.length} Local Sources Cited (100% On-Device)</span>
+                                    <span>{message.sources.length} excerpt{message.sources.length === 1 ? '' : 's'} from your files{isLocal ? ' (stayed on this device)' : ' (sent with the prompt)'}</span>
                                 </button>
                                 {showSources && (
                                     <div className="mt-2 space-y-1 pl-1">
@@ -197,34 +202,34 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                             {isLocal ? (
                                 <>
                                     <ShieldCheck size={12} className="text-emerald-400" />
-                                    <span className="text-emerald-400 font-bold">100% Zero-Telemetry</span>
+                                    <span className="text-emerald-400 font-bold">On this device</span>
                                     <span>•</span>
                                     <span>$0.00 Compute</span>
                                 </>
                             ) : (
                                 <>
                                     <ShieldCheck size={12} className="text-blue-400" />
-                                    <span>100% Client-Side Private</span>
+                                    <span>Direct to provider</span>
                                     <span>•</span>
                                     <span>BYOK Direct</span>
                                 </>
                             )}
 
-                            {telemetry?.tokens && (
+                            {!!telemetry?.tokens && (
                                 <>
                                     <span>•</span>
                                     <span>{telemetry.tokens} tokens</span>
                                 </>
                             )}
 
-                            {telemetry?.tokPerSec && (
+                            {!!telemetry?.tokPerSec && (
                                 <>
                                     <span>•</span>
                                     <span>{telemetry.tokPerSec} tok/s</span>
                                 </>
                             )}
 
-                            {telemetry?.durationMs && (
+                            {!!telemetry?.durationMs && (
                                 <>
                                     <span>•</span>
                                     <span>{(telemetry.durationMs / 1000).toFixed(1)}s</span>
@@ -235,11 +240,11 @@ export const MessageBubble = React.memo(({ message, onEdit, onSwitchVariant }: M
                             {!isLocal && telemetry?.cost !== undefined && (
                                 <>
                                     <span>•</span>
-                                    <span className="text-amber-400 font-bold">
-                                        ${telemetry.cost.toFixed(4)}
-                                    </span>
-                                    <span className="text-[10px] text-text-faint">
-                                        (Saved ~98% vs $20/mo)
+                                    <span
+                                        className="text-amber-400 font-bold"
+                                        title={telemetry.usageSource === 'provider' ? 'From token counts reported by the provider and its list price' : 'Token counts estimated (chars / 4)'}
+                                    >
+                                        {formatCost(telemetry.cost)}{telemetry.usageSource === 'provider' ? '' : ' (est.)'}
                                     </span>
                                 </>
                             )}

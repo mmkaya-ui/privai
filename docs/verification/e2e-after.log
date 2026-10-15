@@ -1,0 +1,24 @@
+# e2e/privai.spec.ts + e2e/features.spec.ts against the fixed branch (Chromium 141 headless, 2026-10-15).
+
+
+Running 17 tests using 1 worker
+
+  ✓   1 e2e/features.spec.ts:50:5 › Stop before the first token: shows a notice and the next request does not include it (1.6s)
+  ✓   2 e2e/features.spec.ts:70:5 › Edit a sent prompt: new branch is sent, and earlier versions stay switchable (1.3s)
+  ✓   3 e2e/features.spec.ts:89:5 › Arena streams two providers side by side with per-model cost (1.1s)
+  ✓   4 e2e/features.spec.ts:115:5 › Command palette: find a chat by title, export it to Markdown (1.1s)
+  ✓   5 e2e/features.spec.ts:138:5 › Command palette keeps what you type immediately after Ctrl+K (776ms)
+  ✓   6 e2e/features.spec.ts:157:5 › Code block: 'Open in Canvas' renders HTML in a sandboxed iframe without same-origin access (1.6s)
+  ✓   7 e2e/features.spec.ts:168:5 › LM Studio: chat goes to localhost:1234 (OpenAI format) and is marked local and free (1.2s)
+  ✓   8 e2e/privai.spec.ts:87:5 › privacy copy matches what is actually stored and sent (833ms)
+  ✓   9 e2e/privai.spec.ts:106:5 › failed / empty assistant turns are not sent back to the model (1.0s)
+  ✓  10 e2e/privai.spec.ts:132:5 › a reply that finishes after switching chats is saved (6.0s)
+  ✓  11 e2e/privai.spec.ts:146:5 › PDF attachment: text from a real (compressed) PDF reaches the prompt (1.4s)
+  ✓  12 e2e/privai.spec.ts:159:5 › DOCX attachment: document text reaches the prompt (1.0s)
+  ✓  13 e2e/privai.spec.ts:168:5 › image attachment: no binary junk is sent and the user is told it was not sent (1.0s)
+  ✓  14 e2e/privai.spec.ts:180:5 › encrypted .privai backup round-trips in a real browser (1.7s)
+  ✓  15 e2e/privai.spec.ts:213:5 › no analytics or third-party requests: only the app itself and the chosen provider (1.4s)
+  ✓  16 e2e/privai.spec.ts:226:5 › Ollama: 'Test Connection' puts installed models in the model picker, and chat runs locally (1.5s)
+  ✓  17 e2e/privai.spec.ts:255:5 › works offline after the first visit (service worker precache) (1.4s)
+
+  17 passed (28.4s)

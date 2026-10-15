@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useApp } from '@/lib/store';
-import { AVAILABLE_MODELS, AIModelDefinition, createModelConfig } from '@/services/models';
+import { AVAILABLE_MODELS, AIModelDefinition, createModelConfig, formatCost } from '@/services/models';
 import { streamChat } from '@/services/llm';
 import { Swords, Play, Square, Trophy, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -33,9 +33,9 @@ const initialOutputState: ModelOutputState = {
 
 export const ArenaView = () => {
     const { state, dispatch } = useApp();
-    const [modelA, setModelA] = useState<AIModelDefinition>(AVAILABLE_MODELS[0]); // e.g. Llama 3.3 Local
+    const [modelA, setModelA] = useState<AIModelDefinition>(AVAILABLE_MODELS[0]); // first catalog entry: in-browser WebGPU Llama 3.2 1B
     const [modelB, setModelB] = useState<AIModelDefinition>(
-        AVAILABLE_MODELS.find(m => m.id === 'deepseek-chat') || AVAILABLE_MODELS[1]
+        AVAILABLE_MODELS.find(m => m.id === 'deepseek-flash') || AVAILABLE_MODELS[1]
     );
 
     const [prompt, setPrompt] = useState('');
@@ -236,7 +236,7 @@ export const ArenaView = () => {
                             <span>•</span>
                             <span>{(outputA.durationMs / 1000).toFixed(1)}s</span>
                             <span>•</span>
-                            <span className="text-amber-400">${outputA.cost.toFixed(5)}</span>
+                            <span className="text-amber-400">{formatCost(outputA.cost)}</span>
                             {outputA.usageSource === 'estimated' && <span title="Provider did not report usage; chars/4 estimate">(est.)</span>}
                         </div>
                     )}
@@ -327,7 +327,7 @@ export const ArenaView = () => {
                             <span>•</span>
                             <span>{(outputB.durationMs / 1000).toFixed(1)}s</span>
                             <span>•</span>
-                            <span className="text-amber-400">${outputB.cost.toFixed(5)}</span>
+                            <span className="text-amber-400">{formatCost(outputB.cost)}</span>
                             {outputB.usageSource === 'estimated' && <span title="Provider did not report usage; chars/4 estimate">(est.)</span>}
                         </div>
                     )}

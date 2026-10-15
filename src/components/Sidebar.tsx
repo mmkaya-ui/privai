@@ -73,7 +73,7 @@ export const Sidebar = () => {
                 {state.sessions.length === 0 && (
                     <div className="text-center text-text-muted text-xs mt-12 px-4 space-y-1">
                         <p className="font-medium">No chats yet.</p>
-                        <p className="text-text-faint text-[11px]">Conversations are encrypted & persisted locally.</p>
+                        <p className="text-text-faint text-[11px]">Chats are stored in this browser (not encrypted). Use an encrypted backup to move them.</p>
                     </div>
                 )}
                 {state.sessions.map(session => (

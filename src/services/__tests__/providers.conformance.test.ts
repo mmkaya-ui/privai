@@ -70,11 +70,11 @@ const CASES: Case[] = [
     },
     {
         provider: PROVIDERS.deepseek,
-        config: { provider: "deepseek", modelId: "deepseek-chat" },
+        config: { provider: "deepseek", modelId: "deepseek-flash" },
         apiKey: "ds-test",
         wire: () => openAIWire({ usage: "standard" }),
         url: "https://api.deepseek.com/chat/completions",
-        checkRequest: init => expect(json(init).model).toBe("deepseek-chat"),
+        checkRequest: init => expect(json(init).model).toBe("deepseek-flash"),
         usage: { inputTokens: 11, outputTokens: 7 },
         firstChunk: sse({ choices: [{ delta: { content: TOKENS[0] } }] }),
         midStreamError: { wire: openAIError, code: "rate_limit" },
