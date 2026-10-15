@@ -90,147 +90,166 @@ export const AVAILABLE_MODELS: AIModelDefinition[] = [
         description: 'Connects to LM Studio local server on port 1234'
     },
 
-    // Free Fast Cloud Models (Groq)
-    {
-        id: 'llama-3.3-70b-versatile',
-        name: 'Llama 3.3 70B (Groq)',
-        providerId: 'groq',
-        isFree: true,
-        contextWindow: 128000,
-        description: 'Meta\'s open model hosted on Groq LPUs'
-    },
-    {
-        id: 'llama-3.1-8b-instant',
-        name: 'Llama 3.1 8B (Groq)',
-        providerId: 'groq',
-        isFree: true,
-        contextWindow: 128000,
-        description: 'Ultra-fast low-latency cloud model'
-    },
-    {
-        id: 'mixtral-8x7b-32768',
-        name: 'Mixtral 8x7B (Groq)',
-        providerId: 'groq',
-        isFree: true,
-        contextWindow: 32768,
-        description: 'Mistral MoE running at high tokens/sec'
-    },
+    // ---------------------------------------------------------------------------------
+    // Cloud models (BYOK). Prices are USD per 1K tokens, standard tier, non-cached,
+    // non-batch. Provenance for every figure is in PRICING_SOURCES below.
+    // ---------------------------------------------------------------------------------
 
-    // Paid Models - Anthropic
+    // Groq (LPU inference). Groq's Llama 3.x models moved to enterprise-only ("Contact Sales").
     {
-        id: 'claude-3-5-sonnet-20241022',
-        name: 'Claude 3.5 Sonnet',
-        providerId: 'anthropic',
+        id: 'openai/gpt-oss-20b',
+        name: 'GPT-OSS 20B (Groq)',
+        providerId: 'groq',
         isFree: false,
-        contextWindow: 200000,
-        costPer1kInput: 0.003,
-        costPer1kOutput: 0.015,
-        description: 'Anthropic\'s industry-leading coding flagship'
+        contextWindow: 131072,
+        costPer1kInput: 0.000075,
+        costPer1kOutput: 0.0003,
+        description: 'Open-weight model on Groq LPUs • very fast, very cheap'
     },
     {
-        id: 'claude-3-5-haiku-20241022',
-        name: 'Claude 3.5 Haiku',
-        providerId: 'anthropic',
+        id: 'openai/gpt-oss-120b',
+        name: 'GPT-OSS 120B (Groq)',
+        providerId: 'groq',
         isFree: false,
-        contextWindow: 200000,
-        costPer1kInput: 0.0008,
-        costPer1kOutput: 0.004,
-        description: 'Lightning-fast compact Claude model'
-    },
-    {
-        id: 'claude-3-opus-20240229',
-        name: 'Claude 3 Opus',
-        providerId: 'anthropic',
-        isFree: false,
-        contextWindow: 200000,
-        costPer1kInput: 0.015,
-        costPer1kOutput: 0.075,
-        description: 'Deep analytical synthesis and reasoning'
-    },
-
-    // Paid Models - OpenAI
-    {
-        id: 'gpt-4o',
-        name: 'GPT-4o',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 128000,
-        costPer1kInput: 0.0025,
-        costPer1kOutput: 0.01,
-        description: 'OpenAI\'s flagship multimodal intelligence'
-    },
-    {
-        id: 'gpt-4o-mini',
-        name: 'GPT-4o Mini',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 128000,
+        contextWindow: 131072,
         costPer1kInput: 0.00015,
         costPer1kOutput: 0.0006,
-        description: 'Affordable, low-latency reasoning'
-    },
-    {
-        id: 'o3-mini',
-        name: 'o3-mini',
-        providerId: 'openai',
-        isFree: false,
-        contextWindow: 128000,
-        costPer1kInput: 0.0011,
-        costPer1kOutput: 0.0044,
-        description: 'Next-generation STEM reasoning model'
+        description: 'Larger open-weight model on Groq LPUs'
     },
 
-    // Paid Models - DeepSeek
+    // Anthropic (Haiku price applies to prompts up to 100K tokens)
+    {
+        id: 'claude-sonnet-5-5',
+        name: 'Claude Sonnet 5.5',
+        providerId: 'anthropic',
+        isFree: false,
+        costPer1kInput: 0.002,
+        costPer1kOutput: 0.01,
+        description: 'Balanced speed and intelligence'
+    },
+    {
+        id: 'claude-haiku-5-5',
+        name: 'Claude Haiku 5.5',
+        providerId: 'anthropic',
+        isFree: false,
+        costPer1kInput: 0.0001,
+        costPer1kOutput: 0.0005,
+        description: 'Fast, low-cost Claude for high-volume tasks'
+    },
+    {
+        id: 'claude-opus-5-5',
+        name: 'Claude Opus 5.5',
+        providerId: 'anthropic',
+        isFree: false,
+        costPer1kInput: 0.004,
+        costPer1kOutput: 0.02,
+        description: 'Long-running agentic coding and knowledge work'
+    },
+
+    // OpenAI (short-context standard tier)
+    {
+        id: 'gpt-6.1-sol',
+        name: 'GPT-6.1 Sol',
+        providerId: 'openai',
+        isFree: false,
+        costPer1kInput: 0.002,
+        costPer1kOutput: 0.01,
+        description: 'OpenAI general-purpose model'
+    },
+    {
+        id: 'gpt-6-luna',
+        name: 'GPT-6 Luna',
+        providerId: 'openai',
+        isFree: false,
+        costPer1kInput: 0.0001,
+        costPer1kOutput: 0.0005,
+        description: 'Small, low-latency OpenAI model'
+    },
+    {
+        id: 'gpt-6-astra',
+        name: 'GPT-6 Astra',
+        providerId: 'openai',
+        isFree: false,
+        costPer1kInput: 0.01,
+        costPer1kOutput: 0.05,
+        description: 'OpenAI flagship'
+    },
+
+    // DeepSeek (prices NOT re-verified — docs are client-rendered; see PRICING_SOURCES)
     {
         id: 'deepseek-chat',
-        name: 'DeepSeek V3',
+        name: 'DeepSeek Chat',
         providerId: 'deepseek',
         isFree: false,
-        contextWindow: 64000,
-        costPer1kInput: 0.00014,
-        costPer1kOutput: 0.00028,
-        description: 'DeepSeek\'s flagship 671B MoE chat model'
+        costPer1kInput: 0.00028,
+        costPer1kOutput: 0.00042,
+        description: 'DeepSeek non-thinking mode'
     },
     {
         id: 'deepseek-reasoner',
-        name: 'DeepSeek R1',
+        name: 'DeepSeek Reasoner',
         providerId: 'deepseek',
         isFree: false,
-        contextWindow: 64000,
-        costPer1kInput: 0.00055,
-        costPer1kOutput: 0.00219,
-        description: 'Open reasoning model with chain-of-thought'
+        costPer1kInput: 0.00028,
+        costPer1kOutput: 0.00042,
+        description: 'DeepSeek thinking mode'
     },
 
-    // Gemini
+    // Google Gemini (prompts up to 200K tokens)
     {
-        id: 'gemini-1.5-pro',
-        name: 'Gemini 1.5 Pro',
+        id: 'gemini-3.8-flash',
+        name: 'Gemini 3.8 Flash',
         providerId: 'gemini',
         isFree: false,
-        contextWindow: 2000000,
-        costPer1kInput: 0.00125,
-        costPer1kOutput: 0.005,
-        description: 'Google\'s 2M context multi-modal flagship'
+        costPer1kInput: 0.00075,
+        costPer1kOutput: 0.00375,
+        description: 'Promo price through 2026-12-31 ($1.50 / $7.50 per 1M after)'
     },
     {
-        id: 'gemini-1.5-flash',
-        name: 'Gemini 1.5 Flash',
+        id: 'gemini-3.1-flash-lite',
+        name: 'Gemini 3.1 Flash-Lite',
         providerId: 'gemini',
         isFree: false,
-        contextWindow: 1000000,
-        costPer1kInput: 0.000075,
-        costPer1kOutput: 0.0003,
-        description: 'High-speed lightweight Gemini engine'
+        costPer1kInput: 0.00025,
+        costPer1kOutput: 0.0015,
+        description: 'Cost-efficient, high-volume Gemini'
+    },
+    {
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro (Preview)',
+        providerId: 'gemini',
+        isFree: false,
+        costPer1kInput: 0.002,
+        costPer1kOutput: 0.012,
+        description: 'Google\'s Pro model'
     }
 ];
 
+export interface PricingSource {
+    url: string;
+    /** Date the figures in AVAILABLE_MODELS were checked against `url`. */
+    asOf: string;
+    /** false = could not be re-checked on that date; treat figures as approximate. */
+    verified: boolean;
+    note?: string;
+}
+
+/** Where each provider's prices come from. Update `asOf` whenever prices are re-checked. */
+export const PRICING_SOURCES: Record<'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'groq', PricingSource> = {
+    openai: { url: 'https://platform.openai.com/docs/pricing', asOf: '2026-10-15', verified: true },
+    anthropic: { url: 'https://docs.anthropic.com/en/docs/about-claude/pricing', asOf: '2026-10-15', verified: true, note: 'Haiku 5.5: $0.10/$0.50 up to 100K-token prompts, $0.50/$2.50 above.' },
+    gemini: { url: 'https://ai.google.dev/gemini-api/docs/pricing', asOf: '2026-10-15', verified: true, note: 'Prompts ≤200K tokens. 3.8 Flash promo ends 2026-12-31.' },
+    groq: { url: 'https://console.groq.com/docs/models', asOf: '2026-10-15', verified: true, note: 'Free tier with rate limits exists; figures are paid-tier prices.' },
+    deepseek: { url: 'https://api-docs.deepseek.com/quick_start/pricing', asOf: '2025-09-29', verified: false, note: 'Pricing page is client-rendered and could not be re-checked; DeepSeek also applies off-peak discounts.' },
+};
+
+/** USD cost for a request, from the per-1K-token prices above. Local models are always 0. */
 export function estimateCost(modelId: string, inputTokens: number, outputTokens: number): number {
     const model = getModelById(modelId);
-    if (!model || model.isLocal || model.isFree) return 0;
+    if (!model || model.isLocal) return 0;
     const inputCost = ((model.costPer1kInput || 0) * inputTokens) / 1000;
     const outputCost = ((model.costPer1kOutput || 0) * outputTokens) / 1000;
-    return Math.round((inputCost + outputCost) * 100000) / 100000;
+    return Math.round((inputCost + outputCost) * 1e7) / 1e7;
 }
 
 // Helper to get models available based on API keys & local config

@@ -1,77 +1,102 @@
-import { LLMProviderAdapter, Message, ModelConfig } from "@/types/llm";
+import type { LLMProvider, LLMStreamEvent, Message, ModelConfig } from "@/types/llm";
+import { LLMError, abortedError, errorFromFetchFailure, providerFetch, readSSE, tryParseJSON } from "./llm-core";
 
-export const AnthropicAdapter: LLMProviderAdapter = {
-    id: 'anthropic',
-    name: 'Anthropic',
+/**
+ * Anthropic Messages API (streaming).
+ *
+ * Wire format (named SSE events):
+ *   event: message_start        data: {"message":{"usage":{"input_tokens":25,"output_tokens":1}}}
+ *   event: content_block_delta  data: {"delta":{"type":"text_delta","text":"Hi"}}
+ *   event: message_delta        data: {"usage":{"output_tokens":15}}
+ *   event: message_stop
+ *   event: error                data: {"error":{"type":"overloaded_error","message":"Overloaded"}}
+ */
+const DEFAULT_ENDPOINT = "https://api.anthropic.com/v1/messages";
 
-    async chat(messages: Message[], config: ModelConfig, apiKey: string, signal?: AbortSignal) {
-        if (!apiKey) throw new Error("API Key required for Anthropic");
+interface AnthropicEvent {
+    type?: string;
+    message?: { usage?: { input_tokens?: number; output_tokens?: number } };
+    delta?: { type?: string; text?: string };
+    usage?: { output_tokens?: number; input_tokens?: number };
+    error?: { type?: string; message?: string };
+}
 
-        // Anthropic uses a different message format
-        const anthropicMessages = messages
-            .filter(m => m.role !== 'system')
-            .map(m => ({
-                role: m.role === 'assistant' ? 'assistant' : 'user',
-                content: m.content
-            }));
+const ERROR_TYPE_CODE: Record<string, LLMError["code"]> = {
+    authentication_error: "auth",
+    permission_error: "auth",
+    rate_limit_error: "rate_limit",
+    overloaded_error: "server",
+    api_error: "server",
+    invalid_request_error: "bad_request",
+    not_found_error: "not_found",
+    request_too_large: "bad_request",
+};
 
-        const systemMessage = messages.find(m => m.role === 'system')?.content;
-        const endpoint = config.baseUrl?.trim() || "https://api.anthropic.com/v1/messages";
+export const AnthropicProvider: LLMProvider = {
+    id: "anthropic",
+    name: "Anthropic",
+    isLocal: false,
+    requiresApiKey: true,
 
-        const response = await fetch(endpoint, {
+    async *stream(messages: Message[], config: ModelConfig, apiKey: string, signal?: AbortSignal): AsyncGenerator<LLMStreamEvent> {
+        if (!apiKey) throw new LLMError({ code: "auth", provider: "anthropic", message: "Anthropic: API key required. Add one in Settings." });
+
+        const system = messages.filter(m => m.role === "system").map(m => m.content).join("\n\n");
+        const endpoint = config.baseUrl?.trim() || DEFAULT_ENDPOINT;
+
+        const res = await providerFetch(AnthropicProvider, endpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "x-api-key": apiKey,
                 "anthropic-version": "2023-06-01",
-                // Required by Anthropic for direct browser-side API calls
-                "anthropic-dangerous-direct-browser-access": "true"
+                // Required by Anthropic for direct browser-side API calls (enables CORS).
+                "anthropic-dangerous-direct-browser-access": "true",
             },
-            signal,
             body: JSON.stringify({
                 model: config.modelId,
                 max_tokens: 4096,
-                messages: anthropicMessages,
-                ...(systemMessage && { system: systemMessage }),
-                stream: true
-            })
-        });
+                messages: messages
+                    .filter(m => m.role !== "system")
+                    .map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content })),
+                ...(system && { system }),
+                ...(config.temperature !== undefined && { temperature: Math.min(config.temperature, 1) }),
+                stream: true,
+            }),
+        }, signal);
 
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Anthropic API Error (${response.status})`);
-        }
+        try {
+            for await (const evt of readSSE(res.body, signal, () => abortedError("anthropic"))) {
+                const json = tryParseJSON(evt.data) as AnthropicEvent | undefined;
+                if (!json) continue;
+                const type = json.type ?? evt.event;
 
-        if (!response.body) throw new Error("No response body");
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        return (async function* () {
-            let buffer = "";
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-
-                for (const line of lines) {
-                    if (line.startsWith("data: ")) {
-                        const data = line.slice(6);
-                        try {
-                            const json = JSON.parse(data);
-                            if (json.type === 'content_block_delta') {
-                                const token = json.delta?.text || "";
-                                yield token;
-                            }
-                        } catch {
-                            // ignore parse error for partial lines
-                        }
+                switch (type) {
+                    case "message_start": {
+                        const u = json.message?.usage;
+                        if (u?.input_tokens != null) yield { type: "usage", usage: { inputTokens: u.input_tokens } };
+                        break;
+                    }
+                    case "content_block_delta":
+                        if (json.delta?.type === "text_delta" && json.delta.text) yield { type: "token", text: json.delta.text };
+                        break;
+                    case "message_delta":
+                        if (json.usage?.output_tokens != null) yield { type: "usage", usage: { outputTokens: json.usage.output_tokens } };
+                        break;
+                    case "message_stop":
+                        return;
+                    case "error": {
+                        const t = json.error?.type ?? "api_error";
+                        throw new LLMError({
+                            code: ERROR_TYPE_CODE[t] ?? "server",
+                            provider: "anthropic",
+                            message: `Anthropic: ${json.error?.message ?? t}`,
+                        });
                     }
                 }
             }
-        })();
-    }
+        } catch (err) {
+            throw errorFromFetchFailure(AnthropicProvider, err, endpoint, signal);
+        }
+    },
 };

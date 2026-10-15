@@ -1,0 +1,137 @@
+{
+  "createdAt": "2026-10-15T12:24:54.477Z",
+  "mock": false,
+  "runs": 1,
+  "prompts": [
+    "In two sentences, explain what a Server-Sent Events stream is.",
+    "Write a TypeScript function that debounces another function. Code only.",
+    "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much is the ball? Answer briefly."
+  ],
+  "summary": [
+    {
+      "target": "ollama:mistral-nemo:latest",
+      "runs": 3,
+      "errors": 0,
+      "ttftMedianMs": 12440,
+      "ttftP90Ms": 13144,
+      "latencyMedianMs": 19692,
+      "latencyP90Ms": 21112,
+      "tokPerSecMedian": 12.9,
+      "outputTokensMean": 86.33333333333333,
+      "totalCostUsd": 0,
+      "usageSource": "provider"
+    },
+    {
+      "target": "ollama:qwen3-vl:8b",
+      "runs": 3,
+      "errors": 1,
+      "ttftMedianMs": 20029,
+      "ttftP90Ms": 20943,
+      "latencyMedianMs": 22511,
+      "latencyP90Ms": 24132,
+      "tokPerSecMedian": 109.15,
+      "outputTokensMean": 295.5,
+      "totalCostUsd": 0,
+      "usageSource": "provider",
+      "firstError": "Generation stopped"
+    }
+  ],
+  "samples": {
+    "ollama:mistral-nemo:latest": [
+      {
+        "prompt": "In two sentences, explain what a Server-Sent Events stream is.",
+        "run": 0,
+        "ok": true,
+        "telemetry": {
+          "tokens": 54,
+          "inputTokens": 17,
+          "tokPerSec": 12.9,
+          "ttftMs": 13144,
+          "durationMs": 17335,
+          "cost": 0,
+          "usageSource": "provider",
+          "provider": "ollama",
+          "isLocal": true
+        },
+        "chars": 267
+      },
+      {
+        "prompt": "Write a TypeScript function that debounces another function. Code only.",
+        "run": 0,
+        "ok": true,
+        "telemetry": {
+          "tokens": 92,
+          "inputTokens": 18,
+          "tokPerSec": 12.7,
+          "ttftMs": 12440,
+          "durationMs": 19692,
+          "cost": 0,
+          "usageSource": "provider",
+          "provider": "ollama",
+          "isLocal": true
+        },
+        "chars": 343
+      },
+      {
+        "prompt": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much is the ball? Answer briefly.",
+        "run": 0,
+        "ok": true,
+        "telemetry": {
+          "tokens": 113,
+          "inputTokens": 39,
+          "tokPerSec": 13,
+          "ttftMs": 12420,
+          "durationMs": 21112,
+          "cost": 0,
+          "usageSource": "provider",
+          "provider": "ollama",
+          "isLocal": true
+        },
+        "chars": 288
+      }
+    ],
+    "ollama:qwen3-vl:8b": [
+      {
+        "prompt": "In two sentences, explain what a Server-Sent Events stream is.",
+        "run": 0,
+        "ok": true,
+        "telemetry": {
+          "tokens": 132,
+          "inputTokens": 24,
+          "tokPerSec": 74.4,
+          "ttftMs": 19115,
+          "durationMs": 20890,
+          "cost": 0,
+          "usageSource": "provider",
+          "provider": "ollama",
+          "isLocal": true
+        },
+        "chars": 336
+      },
+      {
+        "prompt": "Write a TypeScript function that debounces another function. Code only.",
+        "run": 0,
+        "ok": false,
+        "error": "Generation stopped",
+        "chars": 0
+      },
+      {
+        "prompt": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much is the ball? Answer briefly.",
+        "run": 0,
+        "ok": true,
+        "telemetry": {
+          "tokens": 459,
+          "inputTokens": 46,
+          "tokPerSec": 143.9,
+          "ttftMs": 20943,
+          "durationMs": 24132,
+          "cost": 0,
+          "usageSource": "provider",
+          "provider": "ollama",
+          "isLocal": true
+        },
+        "chars": 261
+      }
+    ]
+  }
+}

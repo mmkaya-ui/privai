@@ -39,7 +39,7 @@ const initialState: AppState = {
     activeView: 'chat',
     defaultModelConfig: {
         provider: 'groq',
-        modelId: 'llama-3.3-70b-versatile',
+        modelId: 'openai/gpt-oss-20b',
         temperature: 0.7,
     },
 };

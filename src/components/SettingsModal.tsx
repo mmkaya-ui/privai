@@ -50,11 +50,11 @@ export const SettingsModal = () => {
     if (!state.isSettingsOpen) return null;
 
     const cloudProviders = [
-        { id: 'groq', name: 'Groq (Free)', desc: 'High-speed cloud LPUs. Get key at console.groq.com' },
-        { id: 'anthropic', name: 'Anthropic (Claude)', desc: 'Claude 3.5 Sonnet / Haiku. Direct browser access enabled' },
-        { id: 'openai', name: 'OpenAI (GPT-4o / o3-mini)', desc: 'OpenAI official API or compatible endpoints' },
-        { id: 'deepseek', name: 'DeepSeek (V3 / R1)', desc: 'DeepSeek cloud API key' },
-        { id: 'gemini', name: 'Google Gemini', desc: 'Gemini 1.5 Pro / Flash API key' },
+        { id: 'groq', name: 'Groq', desc: 'High-speed cloud LPUs (free tier with rate limits). Get key at console.groq.com' },
+        { id: 'anthropic', name: 'Anthropic (Claude)', desc: 'Claude Sonnet / Haiku / Opus. Direct browser access enabled' },
+        { id: 'openai', name: 'OpenAI', desc: 'OpenAI official API or compatible endpoints' },
+        { id: 'deepseek', name: 'DeepSeek', desc: 'DeepSeek cloud API key' },
+        { id: 'gemini', name: 'Google Gemini', desc: 'Gemini Flash / Pro API key (sent as x-goog-api-key header)' },
     ];
 
     const handleSave = () => {

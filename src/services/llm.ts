@@ -1,91 +1,112 @@
-import { Message, ModelConfig, LLMProviderAdapter, MessageTelemetry } from "@/types/llm";
+import type { LLMProvider, LLMProviderType, Message, MessageTelemetry, ModelConfig, TokenUsage } from "@/types/llm";
+import { LLMError, abortedError, estimateTokens, isAbortError } from "./llm-core";
+import { estimateCost } from "./models";
 
 // Registry
-import { OpenAIAdapter } from "./openai";
-import { GroqAdapter } from "./groq";
-import { DeepSeekAdapter } from "./deepseek";
-import { AnthropicAdapter } from "./anthropic";
-import { GeminiAdapter } from "./gemini";
-import { OllamaAdapter, LMStudioAdapter } from "./ollama";
-import { WebLLMAdapter } from "./webllm";
+import { OpenAIProvider, GroqProvider, DeepSeekProvider, CustomProvider } from "./openai";
+import { AnthropicProvider } from "./anthropic";
+import { GeminiProvider } from "./gemini";
+import { OllamaProvider, LMStudioProvider } from "./ollama";
+import { WebLLMProvider } from "./webllm";
 
-export const getAdapter = (providerId: string): LLMProviderAdapter => {
-    switch (providerId) {
-        case 'openai': return OpenAIAdapter;
-        case 'groq': return GroqAdapter;
-        case 'deepseek': return DeepSeekAdapter;
-        case 'anthropic': return AnthropicAdapter;
-        case 'gemini': return GeminiAdapter;
-        case 'ollama': return OllamaAdapter;
-        case 'lmstudio': return LMStudioAdapter;
-        case 'webllm': return WebLLMAdapter;
-        default: throw new Error(`Provider ${providerId} not implemented`);
-    }
+export const PROVIDERS: Readonly<Record<LLMProviderType, LLMProvider>> = {
+    openai: OpenAIProvider,
+    anthropic: AnthropicProvider,
+    gemini: GeminiProvider,
+    deepseek: DeepSeekProvider,
+    groq: GroqProvider,
+    ollama: OllamaProvider,
+    lmstudio: LMStudioProvider,
+    webllm: WebLLMProvider,
+    custom: CustomProvider,
 };
+
+export function getProvider(providerId: string): LLMProvider {
+    const p = (PROVIDERS as Record<string, LLMProvider | undefined>)[providerId];
+    if (!p) throw new LLMError({ code: "unsupported", provider: providerId, message: `Provider "${providerId}" is not implemented` });
+    return p;
+}
 
 export interface StreamProgress {
     content: string;
     telemetry?: MessageTelemetry;
 }
 
-import { estimateCost } from "./models";
+export interface StreamResult {
+    content: string;
+    telemetry: MessageTelemetry;
+}
 
+type Clock = () => number;
+const defaultClock: Clock = () => performance.now();
+
+/**
+ * Provider-agnostic streaming loop with token + cost accounting.
+ *
+ * Token counts come from the provider's own usage report when available (OpenAI/Groq/
+ * DeepSeek `stream_options.include_usage`, Anthropic `message_start`/`message_delta`,
+ * Gemini `usageMetadata`, Ollama `eval_count`, WebLLM `usage`). Otherwise they fall back
+ * to the chars/4 heuristic and telemetry is marked `usageSource: 'estimated'`.
+ *
+ * Throughput is output tokens / decode time (first token → last token), so slow
+ * time-to-first-token isn't double-counted; TTFT is reported separately.
+ */
 export async function streamChat(
     messages: Message[],
     config: ModelConfig,
     apiKey: string,
     onProgress: (progress: StreamProgress) => void,
-    signal?: AbortSignal
-) {
-    const adapter = getAdapter(config.provider);
-    const startTime = performance.now();
-    const isLocal = config.provider === 'ollama' || config.provider === 'lmstudio' || config.provider === 'webllm';
-    const inputChars = messages.reduce((acc, m) => acc + m.content.length, 0);
-    const inputTokens = Math.max(Math.round(inputChars / 4), 1);
+    signal?: AbortSignal,
+    clock: Clock = defaultClock
+): Promise<StreamResult> {
+    const provider = getProvider(config.provider);
+    const isLocal = provider.isLocal;
+    const startTime = clock();
+    const estimatedInput = Math.max(1, messages.reduce((acc, m) => acc + estimateTokens(m.content), 0));
 
-    const generator = await adapter.chat(messages, config, apiKey, signal);
+    let content = "";
+    let firstTokenAt: number | null = null;
+    const reported: Partial<TokenUsage> = {};
 
-    let fullContent = "";
-    let chunkCount = 0;
+    const telemetryNow = (): MessageTelemetry => {
+        const now = clock();
+        const outputTokens = reported.outputTokens ?? estimateTokens(content);
+        const inputTokens = reported.inputTokens ?? estimatedInput;
+        const decodeSeconds = firstTokenAt === null ? 0 : (now - firstTokenAt) / 1000;
+        // Need a little decode time before a rate means anything.
+        const tokPerSec = decodeSeconds >= 0.05 ? Math.round((outputTokens / decodeSeconds) * 10) / 10 : 0;
+        return {
+            tokens: outputTokens,
+            inputTokens,
+            tokPerSec,
+            ttftMs: firstTokenAt === null ? undefined : Math.round(firstTokenAt - startTime),
+            durationMs: Math.round(now - startTime),
+            cost: isLocal ? 0 : estimateCost(config.modelId, inputTokens, outputTokens),
+            usageSource: reported.outputTokens !== undefined ? "provider" : "estimated",
+            provider: config.provider,
+            isLocal,
+        };
+    };
 
-    for await (const token of generator) {
-        if (signal?.aborted) break;
-        fullContent += token;
-        chunkCount++;
-
-        const elapsedSeconds = Math.max((performance.now() - startTime) / 1000, 0.05);
-        // Approximate token count: chars / 4 as standard heuristic
-        const estimatedTokens = Math.max(Math.round(fullContent.length / 4), chunkCount);
-        const tokPerSec = Math.round((estimatedTokens / elapsedSeconds) * 10) / 10;
-        const currentCost = isLocal ? 0 : estimateCost(config.modelId, inputTokens, estimatedTokens);
-
-        onProgress({
-            content: fullContent,
-            telemetry: {
-                tokens: estimatedTokens,
-                tokPerSec,
-                durationMs: Math.round(performance.now() - startTime),
-                cost: currentCost,
-                provider: config.provider,
-                isLocal
+    try {
+        for await (const evt of provider.stream(messages, config, apiKey, signal)) {
+            if (signal?.aborted) throw abortedError(provider.id);
+            if (evt.type === "token") {
+                if (firstTokenAt === null) firstTokenAt = clock();
+                content += evt.text;
+                onProgress({ content, telemetry: telemetryNow() });
+            } else {
+                Object.assign(reported, evt.usage);
             }
-        });
+        }
+    } catch (err) {
+        if (err instanceof LLMError) throw err;
+        if (isAbortError(err) || signal?.aborted) throw abortedError(provider.id, err);
+        throw new LLMError({ code: "unknown", provider: provider.id, message: `${provider.name}: ${(err as Error)?.message ?? String(err)}`, cause: err });
     }
 
-    const totalDuration = Math.round(performance.now() - startTime);
-    const totalTokens = Math.max(Math.round(fullContent.length / 4), 1);
-    const finalTokPerSec = Math.round((totalTokens / Math.max(totalDuration / 1000, 0.1)) * 10) / 10;
-    const finalCost = isLocal ? 0 : estimateCost(config.modelId, inputTokens, totalTokens);
-
-    return {
-        content: fullContent,
-        telemetry: {
-            tokens: totalTokens,
-            tokPerSec: finalTokPerSec,
-            durationMs: totalDuration,
-            cost: finalCost,
-            provider: config.provider,
-            isLocal
-        }
-    };
+    const telemetry = telemetryNow();
+    // Final progress tick so the UI shows provider-reported usage, which usually arrives after the last token.
+    onProgress({ content, telemetry });
+    return { content, telemetry };
 }

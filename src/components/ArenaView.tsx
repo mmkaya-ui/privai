@@ -15,6 +15,8 @@ interface ModelOutputState {
     tokPerSec: number;
     durationMs: number;
     ttftMs: number;
+    cost: number;
+    usageSource?: 'provider' | 'estimated';
     error?: string;
     isWinner?: boolean;
 }
@@ -26,6 +28,7 @@ const initialOutputState: ModelOutputState = {
     tokPerSec: 0,
     durationMs: 0,
     ttftMs: 0,
+    cost: 0,
 };
 
 export const ArenaView = () => {
@@ -73,24 +76,21 @@ export const ArenaView = () => {
         const ctrlB = new AbortController();
         abortB.current = ctrlB;
 
-        const startA = performance.now();
-        let firstTokenA = false;
-
         const runA = streamChat(
             messages,
             configA,
             keyA,
             (progress) => {
-                if (!firstTokenA) {
-                    firstTokenA = true;
-                    setOutputA(prev => ({ ...prev, ttftMs: Math.round(performance.now() - startA) }));
-                }
+                const t = progress.telemetry;
                 setOutputA(prev => ({
                     ...prev,
                     content: progress.content,
-                    tokens: progress.telemetry?.tokens || 0,
-                    tokPerSec: progress.telemetry?.tokPerSec || 0,
-                    durationMs: progress.telemetry?.durationMs || 0
+                    tokens: t?.tokens || 0,
+                    tokPerSec: t?.tokPerSec || 0,
+                    durationMs: t?.durationMs || 0,
+                    ttftMs: t?.ttftMs ?? prev.ttftMs,
+                    cost: t?.cost ?? 0,
+                    usageSource: t?.usageSource
                 }));
             },
             ctrlA.signal
@@ -102,24 +102,21 @@ export const ArenaView = () => {
             setOutputA(prev => ({ ...prev, isGenerating: false }));
         });
 
-        const startB = performance.now();
-        let firstTokenB = false;
-
         const runB = streamChat(
             messages,
             configB,
             keyB,
             (progress) => {
-                if (!firstTokenB) {
-                    firstTokenB = true;
-                    setOutputB(prev => ({ ...prev, ttftMs: Math.round(performance.now() - startB) }));
-                }
+                const t = progress.telemetry;
                 setOutputB(prev => ({
                     ...prev,
                     content: progress.content,
-                    tokens: progress.telemetry?.tokens || 0,
-                    tokPerSec: progress.telemetry?.tokPerSec || 0,
-                    durationMs: progress.telemetry?.durationMs || 0
+                    tokens: t?.tokens || 0,
+                    tokPerSec: t?.tokPerSec || 0,
+                    durationMs: t?.durationMs || 0,
+                    ttftMs: t?.ttftMs ?? prev.ttftMs,
+                    cost: t?.cost ?? 0,
+                    usageSource: t?.usageSource
                 }));
             },
             ctrlB.signal
@@ -238,6 +235,9 @@ export const ArenaView = () => {
                             )}
                             <span>•</span>
                             <span>{(outputA.durationMs / 1000).toFixed(1)}s</span>
+                            <span>•</span>
+                            <span className="text-amber-400">${outputA.cost.toFixed(5)}</span>
+                            {outputA.usageSource === 'estimated' && <span title="Provider did not report usage; chars/4 estimate">(est.)</span>}
                         </div>
                     )}
 
@@ -326,6 +326,9 @@ export const ArenaView = () => {
                             )}
                             <span>•</span>
                             <span>{(outputB.durationMs / 1000).toFixed(1)}s</span>
+                            <span>•</span>
+                            <span className="text-amber-400">${outputB.cost.toFixed(5)}</span>
+                            {outputB.usageSource === 'estimated' && <span title="Provider did not report usage; chars/4 estimate">(est.)</span>}
                         </div>
                     )}
 

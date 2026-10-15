@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/lib/store';
 import { MessageBubble } from './MessageBubble';
+import { ErrorBoundary } from './ErrorBoundary';
 import { InputArea } from './InputArea';
 import { Menu, Square, WifiOff, Command, PanelRightOpen, PanelRightClose, Swords, Cpu, Zap, Key, BookOpen, ShieldCheck } from 'lucide-react';
 import { Message } from '@/types/llm';
@@ -373,7 +374,7 @@ export const ChatArea = () => {
                                     Wholesale BYOK
                                 </h4>
                                 <p className="text-[11px] text-text-muted mt-1 leading-snug">
-                                    Claude 3.5, DeepSeek R1, GPT-4o at raw token cost (~$0.0004/msg).
+                                    Claude, GPT, Gemini, DeepSeek, Groq at pay-per-token API prices.
                                 </p>
                             </div>
                             <span className="text-[10px] font-bold text-purple-400 mt-3 pt-2 border-t border-border/40 block">
@@ -486,12 +487,13 @@ export const ChatArea = () => {
                         </div>
                     ) : (
                         session.messages.map(m => (
-                            <MessageBubble
-                                key={m.id}
-                                message={m}
-                                onEdit={handleEditPrompt}
-                                onSwitchVariant={handleSwitchVariant}
-                            />
+                            <ErrorBoundary key={m.id} label="Message" variant="inline" resetKeys={[m.content]}>
+                                <MessageBubble
+                                    message={m}
+                                    onEdit={handleEditPrompt}
+                                    onSwitchVariant={handleSwitchVariant}
+                                />
+                            </ErrorBoundary>
                         ))
                     )}
                     <div ref={bottomRef} className="h-4" />

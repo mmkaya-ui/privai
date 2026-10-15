@@ -7,8 +7,12 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/test-privai-engine.mjs && node scripts/test-e2e-mock-chat.mjs",
-    "test:prompt": "node scripts/test-e2e-mock-chat.mjs"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "bench": "tsx scripts/benchmark.ts",
+    "ci": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.86",
@@ -43,5 +47,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^3.2.7"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }

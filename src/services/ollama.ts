@@ -1,4 +1,6 @@
-import { LLMProviderAdapter, Message, ModelConfig } from "@/types/llm";
+import type { LLMProvider, LLMStreamEvent, Message, ModelConfig } from "@/types/llm";
+import { LLMError, abortedError, errorFromFetchFailure, joinUrl, providerFetch, readNDJSON } from "./llm-core";
+import { createOpenAICompatibleProvider } from "./openai";
 
 export const DEFAULT_OLLAMA_URL = "http://localhost:11434";
 export const DEFAULT_LMSTUDIO_URL = "http://localhost:1234/v1";
@@ -59,146 +61,80 @@ export async function checkLMStudioConnection(baseUrl = DEFAULT_LMSTUDIO_URL): P
     }
 }
 
-export const OllamaAdapter: LLMProviderAdapter = {
-    id: 'ollama',
-    name: 'Ollama (Local)',
+/**
+ * Ollama native `/api/chat` streaming (newline-delimited JSON, not SSE).
+ *
+ *   {"message":{"role":"assistant","content":"Hel"},"done":false}
+ *   {"message":{"role":"assistant","content":""},"done":true,"prompt_eval_count":26,"eval_count":298}
+ *   {"error":"model 'llama9' not found"}
+ */
+interface OllamaChunk {
+    message?: { content?: string };
+    done?: boolean;
+    prompt_eval_count?: number;
+    eval_count?: number;
+    error?: string;
+}
 
-    async chat(messages: Message[], config: ModelConfig, apiKey?: string, signal?: AbortSignal) {
-        const baseUrl = (config.baseUrl || DEFAULT_OLLAMA_URL).replace(/\/+$/, '');
-        const endpoint = `${baseUrl}/api/chat`;
+export const OllamaProvider: LLMProvider = {
+    id: "ollama",
+    name: "Ollama (Local)",
+    isLocal: true,
+    requiresApiKey: false,
 
-        const ollamaMessages = messages.map(m => ({
-            role: m.role,
-            content: m.content
-        }));
+    async *stream(messages: Message[], config: ModelConfig, _apiKey: string, signal?: AbortSignal): AsyncGenerator<LLMStreamEvent> {
+        const baseUrl = (config.baseUrl || DEFAULT_OLLAMA_URL).replace(/\/+$/, "").replace(/\/v1$/, "");
+        const endpoint = joinUrl(baseUrl, "api/chat");
 
-        let response: Response;
+        const res = await providerFetch(OllamaProvider, endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: config.modelId,
+                messages: messages.map(m => ({ role: m.role, content: m.content })),
+                options: { temperature: config.temperature ?? 0.7 },
+                stream: true,
+            }),
+        }, signal);
+
         try {
-            response = await fetch(endpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                signal,
-                body: JSON.stringify({
-                    model: config.modelId,
-                    messages: ollamaMessages,
-                    options: {
-                        temperature: config.temperature ?? 0.7
-                    },
-                    stream: true
-                })
-            });
-        } catch (err: unknown) {
-            const error = err as Error;
-            if (error.name === 'AbortError') throw err;
-            throw new Error(`Failed to connect to local Ollama (${baseUrl}). Is Ollama running? Run 'ollama serve' or start Ollama.`);
-        }
-
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error || `Ollama API Error (${response.status})`);
-        }
-
-        if (!response.body) throw new Error("No response body from Ollama");
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        return (async function* () {
-            let buffer = "";
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed) continue;
-                    try {
-                        const json = JSON.parse(trimmed);
-                        if (json.message?.content) {
-                            yield json.message.content;
-                        }
-                    } catch {
-                        // ignore parse errors for partial chunks
+            for await (const raw of readNDJSON(res.body, signal, () => abortedError("ollama"))) {
+                const json = raw as OllamaChunk;
+                if (json.error) {
+                    const notFound = /not found|pull/i.test(json.error);
+                    throw new LLMError({
+                        code: notFound ? "not_found" : "server",
+                        provider: "ollama",
+                        message: `Ollama: ${json.error}${notFound ? ` — run \`ollama pull ${config.modelId}\`` : ""}`,
+                    });
+                }
+                if (json.message?.content) yield { type: "token", text: json.message.content };
+                if (json.done) {
+                    if (json.prompt_eval_count != null || json.eval_count != null) {
+                        yield {
+                            type: "usage",
+                            usage: {
+                                ...(json.prompt_eval_count != null && { inputTokens: json.prompt_eval_count }),
+                                ...(json.eval_count != null && { outputTokens: json.eval_count }),
+                            },
+                        };
                     }
+                    return;
                 }
             }
-        })();
-    }
+        } catch (err) {
+            throw errorFromFetchFailure(OllamaProvider, err, endpoint, signal);
+        }
+    },
 };
 
-export const LMStudioAdapter: LLMProviderAdapter = {
-    id: 'lmstudio',
-    name: 'LM Studio (Local)',
-
-    async chat(messages: Message[], config: ModelConfig, _apiKey?: string, signal?: AbortSignal) {
-        let baseUrl = (config.baseUrl || DEFAULT_LMSTUDIO_URL).replace(/\/+$/, '');
-        if (!baseUrl.endsWith('/v1')) baseUrl = `${baseUrl}/v1`;
-        const endpoint = `${baseUrl}/chat/completions`;
-
-        let response: Response;
-        try {
-            response = await fetch(endpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                signal,
-                body: JSON.stringify({
-                    model: config.modelId || "local-model",
-                    messages: messages.map(m => ({
-                        role: m.role,
-                        content: m.content
-                    })),
-                    temperature: config.temperature ?? 0.7,
-                    stream: true
-                })
-            });
-        } catch (err: unknown) {
-            const error = err as Error;
-            if (error.name === 'AbortError') throw err;
-            throw new Error(`Failed to connect to LM Studio (${baseUrl}). Start LM Studio Local Server.`);
-        }
-
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `LM Studio Error (${response.status})`);
-        }
-
-        if (!response.body) throw new Error("No response body");
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        return (async function* () {
-            let buffer = "";
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-
-                for (const line of lines) {
-                    if (line.startsWith("data: ")) {
-                        const data = line.slice(6).trim();
-                        if (data === "[DONE]") return;
-                        try {
-                            const json = JSON.parse(data);
-                            const token = json.choices?.[0]?.delta?.content || "";
-                            if (token) yield token;
-                        } catch {
-                            // ignore partial
-                        }
-                    }
-                }
-            }
-        })();
-    }
-};
+/** LM Studio exposes an OpenAI-compatible server; reuse the shared implementation. */
+export const LMStudioProvider = createOpenAICompatibleProvider({
+    id: "lmstudio",
+    name: "LM Studio (Local)",
+    defaultEndpoint: `${DEFAULT_LMSTUDIO_URL}/chat/completions`,
+    isLocal: true,
+    requiresApiKey: false,
+    streamUsage: false,
+    appendV1: true,
+});

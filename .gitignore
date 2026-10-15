@@ -45,3 +45,8 @@ public/sw.js
 public/sw.js.map
 public/workbox-*.js
 public/worker-*.js
+
+# benchmarks output
+benchmarks/results/*.json
+!benchmarks/results/local-ollama-sample.json
+
