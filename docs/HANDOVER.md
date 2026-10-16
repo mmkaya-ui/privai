@@ -118,6 +118,8 @@ type LLMErrorCode = 'auth'|'rate_limit'|'network'|'aborted'|'bad_request'|'not_f
 
 - **ES2017 target:** don't use the regex `/s` flag; use `[\s\S]`.
 - **Gemini keys:** go in the `x-goog-api-key` header, never `?key=`.
+- **CI runner:** pinned to `ubuntu-24.04` (the image CI has passed on). `ubuntu-latest` becomes
+  Ubuntu 26 on 2026-10-19; move the pin only together with a Playwright version that supports it.
 - **Webpack build:** must stay `next build --webpack`, because Serwist's plugin is webpack-only.
 - **pdf.js:** loaded lazily from `pdfjs-dist/legacy/build/pdf.mjs`. The worker URL is resolved with
   `new URL(…, import.meta.url)`, so webpack bundles it (no CDN). The "no third-party requests"
